@@ -1,0 +1,20 @@
+version: "3.8"
+
+services:
+
+  duckdns_cristobal:
+    image: lscr.io/linuxserver/duckdns:latest
+    container_name: duckdns_cristobal
+    network_mode: host
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Europe/Madrid
+      - SUBDOMAINS=cortinascristobal-fs,cortinascristobal-po
+      - TOKEN=28ec1a72-a87f-4fb1-a8b1-558f21ccf617
+      - UPDATE_IP=ipv4
+      #- LOG_FILE=false #optional
+    volumes:
+      - /docker/duckdns/cristobal/config:/config
+    # Es un docker swarm, no sirve para nada el restart
+    #restart: always

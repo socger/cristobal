@@ -1,0 +1,23 @@
+# Archivos de logs
+*.log
+
+# Archivos temporales
+*.tmp
+*.temp
+
+# Archivos de configuración sensibles
+*.env
+*config.local*
+
+# Directorios de datos sensibles
+/data/
+/backups/
+/logs/
+
+# Archivos del sistema
+.DS_Store
+Thumbs.db
+
+# Archivos específicos de Docker que pueden contener datos sensibles
+/docker/volumes/
+/docker/data/

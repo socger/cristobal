@@ -1,0 +1,63 @@
+version: "3.8"
+
+services:
+  facturascripts:
+    # --------------------------------------------------------------------------
+    # Vamos a usar una imagen con id ya descargado en el equipo de Debian
+    # --------------------------------------------------------------------------
+    # Si queremos descargar imagen nueva usaremos ... 
+    # image: facturascripts/facturascripts:latest
+    # --------------------------------------------------------------------------
+    # Como resulta que he querido usar una imagen que tenía ya en este equipo
+    # a la imagen le he puesto un tag (socger) para que no descargue ninguna
+    # y use este stack la imagen que le voy a añadir el tag "socger" con el 
+    # comando:
+    # docker tag cc9b6495e2cd facturascripts/facturascripts:socger
+    # --------------------------------------------------------------------------
+    # Y cc9b6495e2cd es el IMAGE ID que me devuelve el comando:
+    # docker images facturascripts/facturascripts --format "table {{.Repository}}:{{.Tag}}\t{{.ID}}\t{{.CreatedAt}}"
+    # Así que voy a usar la imagen siguiente ...
+    image: facturascripts/facturascripts:socger
+    # --------------------------------------------------------------------------
+    ports:
+      # - 80:80
+      - 8081:80
+    volumes:
+      - /docker/facturascripts:/var/www/html
+      - /docker/sh_creados/wait-for-mysql.sh:/usr/local/bin/wait-for-mysql.sh
+    # --------------------------------------------------------------------------
+    # El contenedor de facturascripts no tiene sh instalado, sino bash
+    # por lo que no usaremos
+    #    entrypoint: ["/bin/sh", "/usr/local/bin/wait-for-mysql.sh"]
+    # usaremos
+    entrypoint: ["/bin/bash", "/usr/local/bin/wait-for-mysql.sh"]
+    # --------------------------------------------------------------------------
+    networks:
+      - shared_backend
+      - traefik_public
+    #environment:
+      #- DATABASE_HOST=mysql
+      #- DATABASE_PORT=3306
+      #- DATABASE_USER=root
+      #- DATABASE_PASSWORD=sasa
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints: [node.role == manager]
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.facturascripts.rule=Host(`cortinascristobal-fs.duckdns.org`)"
+        - "traefik.http.routers.facturascripts.entrypoints=websecure"
+        - "traefik.http.routers.facturascripts.priority=1"
+        - "traefik.http.routers.facturascripts.tls.certresolver=le"
+        - "traefik.http.routers.facturascripts.service=facturascripts"
+        - "traefik.http.services.facturascripts.loadbalancer.server.port=80"
+
+networks:
+  shared_backend:
+    external: true
+    attachable: true
+  traefik_public:
+    external: true
+    attachable: true

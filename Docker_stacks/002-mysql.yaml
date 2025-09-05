@@ -1,0 +1,49 @@
+version: "3.8"
+
+services:
+  mysql:
+    image: mysql:8.0-bookworm
+    environment:
+      MYSQL_ROOT_PASSWORD: sasa
+    ports:
+      - 8306:3306
+    volumes:
+      - /docker/mysql:/var/lib/mysql
+    networks:
+      - shared_backend
+    # ---------------------------------------------------------------------
+    # El apartado healthcheck 
+    # Esto hará que Docker Swarm compruebe si MySQL está realmente listo 
+    #(no solo ejecutándose) mediante mysqladmin ping
+    # El contenedor de mysql tendrá que tener el estado healthy
+    # Este ejemplo de healthcheck le dice a Docker:
+    # - Ejecuta mysqladmin ping -h localhost cada 10 segundos
+    # - Espera hasta 5 segundos la respuesta
+    # - Marca el contenedor como unhealthy si falla 5 veces seguidas
+    # ---------------------------------------------------------------------
+    # QUITADO POR DAR PROBLEMAS, pero lo guardamos por si me hiciera falta
+    # comprobar el funcionamiento de mysql desde otro contenedor
+    # ---------------------------------------------------------------------
+    # healthcheck:
+      # test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      # interval: 10s
+      # timeout: 5s
+      # retries: 5	  
+    # ---------------------------------------------------------------------
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        delay: 10s
+        max_attempts: 3
+      update_config:
+        parallelism: 0
+        order: stop-first
+      placement:
+        constraints:
+          - node.role == manager
+
+networks:
+  shared_backend:
+    external: true
+    attachable: true
