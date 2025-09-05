@@ -1,0 +1,1 @@
+Directorio donde se guardarán los log's de algunos .sh

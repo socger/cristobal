@@ -1,0 +1,1 @@
+Directorio donde descomprimiremos algunos ficheros comprimidos como copias de seguriedad realizadas.
