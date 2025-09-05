@@ -1,0 +1,107 @@
+#--------------------------------------------------------#
+# Hay que crear dos dominios:                            #
+# cortinascristobal-tb-b.duckdns.org ... typebot builder #
+# cortinascristobal-tb-v.duckdns.org ... typebot viewer  #
+# miniofront y minioback                                 #
+#--------------------------------------------------------#
+version: "3.8"
+
+services:
+  typebot_builder:
+    # image: elestio/typebot-builder:latest
+    # image: baptistearno/typebot-builder:2.18.2
+    image: elestio/typebot-builder:v3.3.0
+    networks:
+      - traefik_public
+      - shared_backend
+    environment:
+      DATABASE_URL: postgresql://socger:sasa@postgres:5432/typebot
+      ENCRYPTION_SECRET: dcb4f2e8106a0ef44c3f530d3ae3f9fd
+      NEXTAUTH_URL: https://cortinascristobal-tb-b.duckdns.org
+      NEXT_PUBLIC_VIEWER_URL: https://cortinascristobal-tb-v.duckdns.org
+      #
+      #NEXTAUTH_URL_INTERNAL: http://localhost:3000
+      NEXTAUTH_URL_INTERNAL: http://0.0.0.0:3000
+      #
+      ADMIN_EMAIL: socger@gmail.com
+      DISABLE_SIGNUP: "false"
+      SMTP_HOST: smtp.gmail.com
+      SMTP_USERNAME: socger@gmail.com
+      SMTP_PASSWORD: pxzysdteookdbhbb
+      NEXT_PUBLIC_SMTP_FROM: "socger <socger@gmail.com>"
+      SMTP_PORT: 587
+      SMTP_SECURE: "true"
+      S3_ACCESS_KEY: socger
+      S3_SECRET_KEY: dcb4f2e8106a0ef44c3f530d3ae3f9fd
+      S3_BUCKET: typebot
+      S3_ENDPOINT: cortinascristobal-mb.duckdns.org
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+      resources:
+        limits:
+          cpus: "1"
+          memory: 2048M
+      labels:
+        - traefik.enable=true
+        - traefik.http.routers.typebot_builder.rule=Host(`cortinascristobal-tb-b.duckdns.org`)
+        - traefik.http.routers.typebot_builder.tls.certresolver=le
+        - traefik.http.routers.typebot_builder.entrypoints=websecure
+        - traefik.http.routers.typebot_builder.tls=true
+        - traefik.http.routers.typebot_builder.service=typebot_builder
+        - traefik.http.services.typebot_builder.loadbalancer.server.port=3000
+
+  typebot_viewer:
+    #image: elestio/typebot-viewer:latest
+    #image: baptistearno/typebot-viewer:2.18.2
+    image: elestio/typebot-viewer:v3.3.0
+    networks:
+      - traefik_public
+      - shared_backend
+    environment:
+      DATABASE_URL: postgresql://socger:sasa@postgres:5432/typebot
+      ENCRYPTION_SECRET: dcb4f2e8106a0ef44c3f530d3ae3f9fd
+      NEXTAUTH_URL: https://cortinascristobal-tb-b.duckdns.org
+      NEXT_PUBLIC_VIEWER_URL: https://cortinascristobal-tb-v.duckdns.org
+      #
+      #NEXTAUTH_URL_INTERNAL: http://localhost:3000
+      NEXTAUTH_URL_INTERNAL: http://0.0.0.0:3000
+      #
+      ADMIN_EMAIL: socger@gmail.com
+      DISABLE_SIGNUP: "false"
+      SMTP_HOST: smtp.gmail.com
+      SMTP_USERNAME: socger@gmail.com
+      SMTP_PASSWORD: pxzysdteookdbhbb
+      NEXT_PUBLIC_SMTP_FROM: "socger <socger@gmail.com>"
+      SMTP_PORT: 587
+      SMTP_SECURE: "true"
+      S3_ACCESS_KEY: socger
+      S3_SECRET_KEY: dcb4f2e8106a0ef44c3f530d3ae3f9fd
+      S3_BUCKET: typebot
+      S3_ENDPOINT: cortinascristobal-mb.duckdns.org
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+      resources:
+        limits:
+          cpus: "1"
+          memory: 2048M
+      labels:
+        - traefik.enable=true
+        - traefik.http.routers.typebot_viewer.rule=Host(`cortinascristobal-tb-v.duckdns.org`)
+        - traefik.http.routers.typebot_viewer.tls.certresolver=le
+        - traefik.http.routers.typebot_viewer.entrypoints=websecure
+        - traefik.http.routers.typebot_viewer.tls=true
+        - traefik.http.routers.typebot_viewer.service=typebot_viewer
+        - traefik.http.services.typebot_viewer.loadbalancer.server.port=3000
+networks:
+  traefik_public:
+    external: true
+  shared_backend:
+    external: true

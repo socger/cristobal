@@ -1,0 +1,186 @@
+version: "3.8"
+
+services:
+  n8n_editor:
+    #image: n8nio/n8n:latest
+    image: docker.n8n.io/n8nio/n8n
+    environment:
+      DB_TYPE: postgresdb
+      DB_POSTGRESDB_PORT: 5432
+      DB_POSTGRESDB_HOST: postgres
+      DB_POSTGRESDB_DATABASE: n8n_bd
+      DB_POSTGRESDB_USER: socger_nonroot
+      DB_POSTGRESDB_PASSWORD: sasa_nonroot
+###
+      N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS=true
+###
+      N8N_ENCRYPTION_KEY: sasa_nonroot
+      N8N_HOST: cortinascristobal-au.duckdns.org
+      N8N_EDITOR_BASE_URL: https://cortinascristobal-au.duckdns.org/
+      N8N_PROTOCOL: https
+      NODE_ENV: production
+      WEBHOOK_URL: https://cortinascristobal-au.duckdns.org/
+      EXECUTIONS_MODE: queue
+      QUEUE_BULL_REDIS_HOST: redis
+      QUEUE_BULL_REDIS_PORT: 6379
+      QUEUE_BULL_REDIS_DB: 2
+      NODE_FUNCTION_ALLOW_EXTERNAL: moment,lodash,moment-with-locales
+      EXECUTIONS_DATA_PRUNE: 'true'
+      EXECUTIONS_DATA_MAX_AGE: 336
+###
+    ports:
+      - 5678:5678
+###
+    #links es una forma antigua de declarar dependencias, ya no es muy usada si tienes redes correctamente configuradas.  
+    #links:
+      #- postgres
+###
+    volumes:
+      - n8n_storage:/home/node/.n8n
+###
+    #depends_on se asegura de que n8n solo intente arrancar cuando el servicio postgres esté healthy  
+    #como postgres está en otro stack, este depends_on no tendrá efecto real. Solo funciona dentro del mismo docker-compose.    
+    #depends_on:
+      #postgres:
+        #condition: service_healthy
+###
+    # Comando para asegurar que n8n no intente arrancar antes de que PostgreSQL esté listo.
+    command: >
+      /bin/sh -c "
+        echo 'Esperando a PostgreSQL en postgres:5432...';
+        until nc -z postgres 5432; do
+          sleep 2;
+        done;
+        echo 'PostgreSQL está disponible. Iniciando n8n...';
+        n8n start
+      "
+###
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+      resources:
+        limits:
+          cpus: '0.3'
+          memory: 512M
+###
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+###
+      labels:
+        - traefik.enable=true
+        - traefik.http.routers.n8n_editor.rule=Host(`cortinascristobal-au.duckdns.org`)
+        - traefik.http.routers.n8n_editor.service=n8n_editor
+        - traefik.http.routers.n8n_editor.entrypoints=websecure
+        - traefik.http.routers.n8n_editor.tls.certresolver=le
+        - traefik.http.routers.n8n_editor.tls=true
+        - traefik.http.services.n8n_editor.loadbalancer.server.port=5678
+    networks:
+      - shared_backend
+      - traefik_public
+
+  # Yo no voy a usar de momento este bloque, aunque en el vídeo lo instale
+  # OBSERVAR QUE HAY PARAMETROS DIFERENTES 
+  #n8n_webhook:
+    #image: n8nio/n8n:latest
+    #command: webhook
+    #environment:
+      #DB_TYPE: postgresdb
+      #DB_POSTGRESDB_PORT: 5432
+      #DB_POSTGRESDB_HOST: postgres
+      #DB_POSTGRESDB_DATABASE: n8n_bd
+      #DB_POSTGRESDB_USER: postgres
+      #DB_POSTGRESDB_PASSWORD: tu_contraseña_postgres
+      #N8N_ENCRYPTION_KEY: tu_contraseña_32_caracteres
+      #N8N_HOST: n8n.tu-subdominio.com
+      #N8N_EDITOR_BASE_URL: https://n8n.tu-subdominio.com/
+      #N8N_PROTOCOL: https
+      #NODE_ENV: production
+      #WEBHOOK_URL: https://webhook.tu-subdominio.com/
+      #EXECUTIONS_MODE: queue
+      #QUEUE_BULL_REDIS_HOST: redis
+      #QUEUE_BULL_REDIS_PORT: 6379
+      #QUEUE_BULL_REDIS_DB: 2
+      #NODE_FUNCTION_ALLOW_EXTERNAL: moment,lodash,moment-with-locales
+      #EXECUTIONS_DATA_PRUNE: 'true'
+      #EXECUTIONS_DATA_MAX_AGE: 336
+    #deploy:
+      #mode: replicated
+      #replicas: 1
+      #placement:
+        #constraints:
+          #- node.role == manager
+      #resources:
+        #limits:
+          #cpus: '0.5'
+          #memory: 320M
+      #labels:
+        #- traefik.enable=true
+        #- traefik.http.routers.n8n_webhook.rule=Host(`webhook.tu-subdominio.com`)
+        #- traefik.http.routers.n8n_webhook.service=n8n_webhook
+        #- traefik.http.routers.n8n_webhook.entrypoints=websecure
+        #- traefik.http.routers.n8n_webhook.tls.certresolver=le
+        #- traefik.http.routers.n8n_webhook.tls=true
+        #- traefik.http.services.n8n_webhook.loadbalancer.server.port=5678
+    #networks:
+      #- shared_backend
+      #- traefik_public
+
+  # Yo no voy a usar de momento este bloque, aunque en el vídeo lo instale
+  # OBSERVAR QUE HAY PARAMETROS DIFERENTES 
+  #n8n_worker:
+    #image: n8nio/n8n:latest
+    #command: worker --concurrency=3
+    #environment:
+      #DB_TYPE: postgresdb
+      #DB_POSTGRESDB_PORT: 5432
+      #DB_POSTGRESDB_HOST: postgres
+      #DB_POSTGRESDB_DATABASE: n8n_bd
+      #DB_POSTGRESDB_USER: postgres
+      #DB_POSTGRESDB_PASSWORD: tu_contraseña_postgres
+      #N8N_ENCRYPTION_KEY: tu_contraseña_32_caracteres
+      #N8N_HOST: n8n.tu-subdominio.com
+      #N8N_EDITOR_BASE_URL: https://n8n.tu-subdominio.com/
+      #N8N_PROTOCOL: https
+      #NODE_ENV: production
+      #WEBHOOK_URL: https://webhook.tu-subdominio.com/
+      #EXECUTIONS_MODE: queue
+      #QUEUE_BULL_REDIS_HOST: redis
+      #QUEUE_BULL_REDIS_PORT: 6379
+      #QUEUE_BULL_REDIS_DB: 2
+      #NODE_FUNCTION_ALLOW_EXTERNAL: moment,lodash,moment-with-locales
+      #EXECUTIONS_DATA_PRUNE: 'true'
+      #EXECUTIONS_DATA_MAX_AGE: 336
+    #deploy:
+      #mode: replicated
+      #replicas: 1
+      #placement:
+        #constraints:
+          #- node.role == manager
+      #resources:
+        #limits:
+          #cpus: '0.5'
+          #memory: 384M
+    #networks:
+      #- shared_backend
+      #- traefik_public
+
+networks:
+  shared_backend:
+    external: true
+  traefik_public:
+    external: true
+
+volumes:
+  n8n_storage:
+    driver: local
+    driver_opts:
+      type: none
+      device: /docker/n8n/data
+      o: bind
+

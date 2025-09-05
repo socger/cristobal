@@ -1,0 +1,41 @@
+version: "3.8"
+
+services:
+  redis:
+    image: redis:latest
+    command: ["redis-server", "--appendonly", "yes", "--port", "6379"]
+    networks:
+      - shared_backend
+    volumes:
+      - redis_data:/data
+    deploy:
+      mode: replicated
+      replicas: 1
+      resources:
+        limits:
+          cpus: "1"
+          memory: 1024M
+      placement:
+        constraints:
+          - node.role == manager
+    ports:
+      - "6379:6379"
+
+#volumes:
+  #redis_data:
+    #external: true
+volumes:
+  redis_data:
+    driver: local
+    driver_opts:
+      type: none
+      device: /docker/redis/data
+      o: bind
+
+
+#networks:
+  #general_network:
+    #external: true
+networks:
+  shared_backend:
+    external: true

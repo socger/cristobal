@@ -1,0 +1,126 @@
+#-----------------------------------#
+# Hay que crear un dominio:         #
+# cortinascristobal-ct.duckdns.org  #
+#-----------------------------------#
+
+version: "3.8"
+
+services:
+
+  chatwoot_app:
+    image: chatwoot/chatwoot:v3.16.0
+    command: bundle exec rails s -p 3000 -b 0.0.0.0
+    entrypoint: docker/entrypoints/rails.sh
+    volumes:
+      - chatwoot_data:/app/storage
+    networks:
+      - traefik_public
+      - shared_backend
+    environment:
+      INSTALLATION_NAME: socger
+      NODE_ENV: production
+      RAILS_ENV: production
+      INSTALLATION_ENV: docker
+      SECRET_KEY_BASE: OrJe0Chatwoot # me registré con la contraseña OrJe0Chatwoot@ y el usuario socger@gmail.com
+      FRONTEND_URL: https://cortinascristobal-ct.duckdns.org
+      DEFAULT_LOCALE: pt_BR
+      FORCE_SSL: "true"
+      ENABLE_ACCOUNT_SIGNUP: "false"
+      REDIS_URL: redis://redis:6379
+      MAILER_SENDER_EMAIL: Chatwoot socger@gmail.com
+      SMTP_DOMAIN: gmail.com
+      SMTP_ADDRESS: smtp.gmail.com
+      SMTP_PORT: 587
+      SMTP_USERNAME: socger@gmail.com
+      SMTP_PASSWORD: pxzysdteookdbhbb
+      SMTP_AUTHENTICATION: login
+      SMTP_ENABLE_STARTTLS_AUTO: "true"
+      SMTP_OPENSSL_VERIFY_MODE: peer
+      MAILER_INBOUND_EMAIL_DOMAIN: socger@gmail.com
+      POSTGRES_HOST: postgres
+      POSTGRES_USERNAME: socger
+      POSTGRES_PASSWORD: sasa
+      POSTGRES_DATABASE: chatwoot
+      ACTIVE_STORAGE_SERVICE: local
+      RAILS_LOG_TO_STDOUT: "true"
+      USE_INBOX_AVATAR_FOR_BOT: "true"
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 512M
+      labels:
+        - traefik.enable=true
+        - traefik.http.routers.chatwoot_app.rule=Host(`cortinascristobal-ct.duckdns.org`)
+        - traefik.http.routers.chatwoot_app.service=chatwoot_app
+        - traefik.http.routers.chatwoot_app.entrypoints=websecure
+        - traefik.http.routers.chatwoot_app.tls.certresolver=le
+        - traefik.http.routers.chatwoot_app.tls=true
+        - traefik.http.services.chatwoot_app.loadbalancer.server.port=3000
+        - traefik.http.middlewares.sslheader.headers.customrequestheaders.X-Forwarded-Proto=https
+        - traefik.http.routers.chatwoot_app.middlewares=sslheader
+
+  chatwoot_worker:
+    image: chatwoot/chatwoot:v3.16.0
+    command: bundle exec sidekiq -C config/sidekiq.yml
+    volumes:
+      - chatwoot_data:/app/storage
+    networks:
+      - shared_backend
+    environment:
+      INSTALLATION_NAME: socger
+      NODE_ENV: production
+      RAILS_ENV: production
+      INSTALLATION_ENV: docker
+      SECRET_KEY_BASE: OrJe0Chatwoot
+      FRONTEND_URL: https://cortinascristobal-ct.duckdns.org
+      DEFAULT_LOCALE: pt_BR
+      FORCE_SSL: "true"
+      ENABLE_ACCOUNT_SIGNUP: "false"
+      REDIS_URL: redis://redis:6379
+      MAILER_SENDER_EMAIL: Chatwoot socger@gmail.com
+      SMTP_DOMAIN: gmail.com
+      SMTP_ADDRESS: smtp.gmail.com
+      SMTP_PORT: 587
+      SMTP_USERNAME: socger@gmail.com
+      SMTP_PASSWORD: pxzysdteookdbhbb
+      SMTP_AUTHENTICATION: login
+      SMTP_ENABLE_STARTTLS_AUTO: "true"
+      SMTP_OPENSSL_VERIFY_MODE: peer
+      MAILER_INBOUND_EMAIL_DOMAIN: socger@gmail.com
+      POSTGRES_HOST: postgres
+      POSTGRES_USERNAME: socger
+      POSTGRES_PASSWORD: sasa
+      POSTGRES_DATABASE: chatwoot
+      ACTIVE_STORAGE_SERVICE: local
+      RAILS_LOG_TO_STDOUT: "true"
+      USE_INBOX_AVATAR_FOR_BOT: "true"
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 512M
+
+volumes:
+  chatwoot_data:
+    driver: local
+    driver_opts:
+      type: none
+      device: /docker/chatwoot/data
+      o: bind
+
+networks:
+  traefik_public:
+    external: true
+  shared_backend:
+    external: true

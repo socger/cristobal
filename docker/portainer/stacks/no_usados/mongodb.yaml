@@ -1,0 +1,57 @@
+version: "3.8"
+
+services:
+  mongodb:
+    #image: mongo:latest
+    # La cpu del ordenador de Cristobal no tiene AVX
+    image: mongo:4.4
+    ports:
+      - 27017:27017
+    networks:
+      - shared_backend
+    volumes:
+      - mongodb_data:/data/db
+      - mongodb_configdb_data:/data/configdb
+    environment:
+      #- MONGO_INITDB_ROOT_USERNAME=tu_usuario
+      - MONGO_INITDB_ROOT_USERNAME=socger
+      #- MONGO_INITDB_ROOT_PASSWORD=[tu_contraseña_sin_caracteres_especiales]
+      - MONGO_INITDB_ROOT_PASSWORD=sasa
+      - PUID=1000
+      - PGID=1000
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+      resources:
+        limits:
+          cpus: "1"
+          memory: 6144M
+
+#volumes:
+  #mongodb_data:
+    #external: true
+  #mongodb_configdb_data:
+    #external: true
+volumes:
+  mongodb_data:
+    driver: local
+    driver_opts:
+      type: none
+      device: /docker/mongodb/data
+      o: bind
+  mongodb_configdb_data:
+    driver: local
+    driver_opts:
+      type: none
+      device: /docker/mongodb/configdb/data
+      o: bind
+
+#networks:
+  #general_network:
+    #external: true
+networks:
+  shared_backend:
+    external: true

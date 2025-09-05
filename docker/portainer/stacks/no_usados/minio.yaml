@@ -1,0 +1,63 @@
+#-------------------------------#
+# Hay que crear dos dominios:   #
+# miniofront y minioback        #
+#-------------------------------#
+
+version: "3.8"
+
+services:
+  minio:
+    # Esta imagen al intentar montarla nos da el error "Fatal glibc error: CPU does not support x86-64-v2" entre los log'sasa
+    # Este error significa que esa imagen de MinIO está usando una versión de instrucciones x86-64-v2 que la CPU no soporta.
+    #image: quay.io/minio/minio
+    #image: minio/minio:RELEASE.2025-06-13T11-33-47Z-cpuv1
+    image: minio/minio:RELEASE.2024-12-18T13-15-44Z-cpuv1
+    command: server /data --console-address ":9001"
+    networks:
+      - traefik_public
+    volumes:
+      - minio_data:/data
+    environment:
+      MINIO_ROOT_USER: socger
+      MINIO_ROOT_PASSWORD: dcb4f2e8106a0ef44c3f530d3ae3f9fd
+      MINIO_BROWSER_REDIRECT_URL: https://cortinascristobal-mf.duckdns.org
+      MINIO_SERVER_URL: https://cortinascristobal-mb.duckdns.org
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+      resources:
+          limits:
+            cpus: '0.5'
+            memory: 1024M
+      labels:
+        - traefik.enable=true
+        - traefik.http.routers.minio_s3.rule=Host(`cortinascristobal-mb.duckdns.org`)
+        - traefik.http.routers.minio_s3.tls.certresolver=le
+        - traefik.http.routers.minio_s3.entrypoints=websecure
+        - traefik.http.routers.minio_s3.tls=true
+        - traefik.http.routers.minio_s3.service=minio_s3
+        - traefik.http.services.minio_s3.loadbalancer.server.port=9000
+        - traefik.http.routers.minio_console.rule=Host(`cortinascristobal-mf.duckdns.org`)
+        - traefik.http.routers.minio_console.tls.certresolver=le
+        - traefik.http.routers.minio_console.entrypoints=websecure
+        - traefik.http.routers.minio_console.tls=true
+        - traefik.http.routers.minio_console.service=minio_console
+        - traefik.http.services.minio_console.loadbalancer.server.port=9001
+
+#volumes:
+  #minio_data:
+    #external: true
+volumes:
+  minio_data:
+    driver: local
+    driver_opts:
+      type: none
+      device: /docker/minio/data
+      o: bind
+
+networks:
+  traefik_public:
+    external: true

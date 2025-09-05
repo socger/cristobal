@@ -1,0 +1,108 @@
+#--------#
+# PiHole #
+#--------#
+
+version: "3.8"
+
+services:
+
+  pihole:
+    image: pihole/pihole
+    #
+    # --------------------------------------------------
+    # container_name no es compatible con Docker Swarm
+    # --------------------------------------------------
+    #container_name: pihole
+    # --------------------------------------------------
+    #
+    environment:
+      - PUID=1000
+      - PGID=1000
+      #
+      # ⚠️ Change the Web UI Password:
+      - WEBPASSWORD=OrJe0Pihole
+      # -----------------------------------------------------
+      # Curiosamente las siguientes líneas las añadió la IA
+      # Variables DNSMASQ_LISTENING y FTLCONF_LOCAL_IPV4
+      # Estas variables son útiles para evitar problemas de 
+      # resolución dentro del contenedor Pi-hole.
+      # Puedes cambiar 127.0.0.1 por la IP interna del 
+      # contenedor si algún cliente VPN tiene problemas, pero
+      # para empezar está bien.	  
+      # -----------------------------------------------------
+      - DNSMASQ_LISTENING=all
+      #- FTLCONF_LOCAL_IPV4=127.0.0.1  #  Esto limita la interfaz de escucha del pihole-FTL al localhost. En algunos casos impide resolver DNS desde otros contenedores.
+      # FTLCONF_LOCAL_IPV4 ya no es válida desde que Pi-hole migró a pihole.toml. FTL ya no la interpreta.	  
+      #- FTLCONF_LOCAL_IPV4=0.0.0.0  #  Esto le dice a Pi-hole que escuche en todas las interfaces de red internas del contenedor, y así garantiza que wg-easy pueda hacer consultas DNS a él.
+      # -----------------------------------------------------
+      #
+    volumes:
+      - /docker/pihole/etc_pihole:/etc/pihole
+      - /docker/pihole/etc_dnsmasq:/etc/dnsmasq.d
+    ports:
+      - "53:53/tcp"
+      - "53:53/udp"
+      - "5353:80/tcp"
+    #
+    # -----------------------------------------------------
+    # Si estamos bajo docker swarm no hace falta el restart
+    # -----------------------------------------------------
+    #restart: unless-stopped
+    # -----------------------------------------------------
+    #
+    networks:
+      - traefik_public
+      - shared_backend
+      #
+      # ---------------------------------------------------------------------------
+      # Docker Swarm no permite asignar IPs estáticas directamente en contenedores.
+      # Las secciones como esta no funcionarán en Swarm
+      # ---------------------------------------------------------------------------
+      #wg-easy:
+        #ipv4_address: 10.8.1.3
+      # ---------------------------------------------------------------------------
+      #
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints: [node.role == manager]
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.pihole.rule=Host(`cortinascristobal-ho.duckdns.org`)"
+        - "traefik.http.routers.pihole.entrypoints=websecure"
+        #
+        # -----------------------------------------------------
+        # Curiosamente la siguiente línea me la quitó la IA
+        # -----------------------------------------------------
+        - "traefik.http.routers.pihole.priority=1"
+        # -----------------------------------------------------
+        #
+        - "traefik.http.routers.pihole.tls.certresolver=le"
+        #
+        # -----------------------------------------------------
+        # Curiosamente la siguiente línea me la quitó la IA
+        # -----------------------------------------------------
+        - "traefik.http.routers.pihole.service=pihole"
+        # -----------------------------------------------------
+        #
+        #- "traefik.http.services.pihole.loadbalancer.server.port=5353"
+        # La línea de antes está diciendo a Traefik que intente enrutar tráfico HTTPS al puerto interno 5353 del contenedor, pero ese puerto no existe dentro del contenedor de Pi-hole. Pi-hole sirve su interfaz web en el puerto 80 dentro del contenedor, así que esta línea debe ser ...
+        - "traefik.http.services.pihole.loadbalancer.server.port=80"
+
+networks:
+  traefik_public:
+    external: true
+  shared_backend:
+    external: true
+  #
+  # ---------------------------------------------------------------------------
+  # Docker Swarm no permite asignar IPs estáticas directamente en contenedores.
+  # Las secciones como esta no funcionarán en Swarm
+  # ---------------------------------------------------------------------------
+  #wg-easy:
+    #ipam:
+      #config:
+        #- subnet: 10.8.1.0/24
+  # ---------------------------------------------------------------------------
+  #

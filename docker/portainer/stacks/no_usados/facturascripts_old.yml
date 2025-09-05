@@ -1,0 +1,63 @@
+services:
+
+  mysql:
+#    image: mysql:8.0
+#    command: --default-authentication-plugin=mysql_native_password
+    image: mysql:8.0-bookworm
+    platform: linux/amd64
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: sasa
+    networks:
+      - default
+    ports:
+      - 8306:3306
+    volumes:
+      - /docker/mysql:/var/lib/mysql
+
+#  facturascripts-2021-11:
+#    image: facturascripts/facturascripts:2021.4
+#    restart: always
+#    networks:
+#      - default
+#    ports:
+#      - 8082:80
+#    volumes:
+#      - /docker/facturascripts_old:/var/www/html
+
+  facturascripts:
+    image: facturascripts/facturascripts:latest
+    restart: always
+    networks:
+      - default
+    ports:
+      - 8081:80
+#      - 80:80
+    volumes:
+      - /docker/facturascripts:/var/www/html
+    depends_on:
+      - mysql
+
+  adminer:
+    image: adminer
+    restart: always
+    ports:
+      - 8080:8080
+
+  duckdns:
+    image: lscr.io/linuxserver/duckdns:latest
+    container_name: duckdns
+    network_mode: host #optional
+    environment:
+      - PUID=1000 #optional
+      - PGID=1000 #optional
+#      - TZ=Etc/UTC #optional
+      - TZ=Europe/Madrid
+#      - SUBDOMAINS=subdomain1,subdomain2
+      - SUBDOMAINS=cortinascristobal-adm,cortinascristobal-fs,cortinascristobal-po,cortinascristobal-ngx,cortinascristobal-au
+      - TOKEN=28ec1a72-a87f-4fb1-a8b1-558f21ccf617
+#      - UPDATE_IP=ipv4 #optional
+#      - LOG_FILE=false #optional
+    volumes:
+      - /docker/duckdns/config:/config #optional
+    restart: always

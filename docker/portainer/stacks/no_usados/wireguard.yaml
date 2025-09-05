@@ -1,0 +1,48 @@
+#----------------#
+#   Wireguard    #
+#----------------#
+
+version: "3.8"
+
+services:
+  wireguard:
+    # Para una raspberryPi
+    # image: linuxserver/wireguard:arm32v7-v1.0.20210914-ls113
+    #
+    # Para un linux/Debian 12
+    image: linuxserver/wireguard
+    #
+    container_name: wireguard
+    privileged: true
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Europe/Madrid
+      - SERVERURL= #optional - completa esto si lo usas desde fuera de la red
+      - SERVERPORT=51820 #optional
+      - PEERS=5 #optional
+      - PEERDNS=auto #optional
+      - INTERNAL_SUBNET=10.13.13.0 #optional
+    volumes:
+      - /docker/wireguard/config:/config
+      - /docker/wireguard/lib/modules:/lib/modules
+      - /docker/wireguard/usr/src:/usr/src
+    ports:
+      - 51820:51820/udp
+    sysctls:
+      - net.ipv4.conf.all.src_valid_mark=1
+    restart: unless-stopped
+    networks:
+      containers:
+        # ipv4_address: 172.20.0.6
+        ipv4_address: 172.31.0.6  # Dentro de la nueva subred
+
+networks:
+  containers:
+    ipam:
+      config:
+        # - subnet: 172.20.0.0/24
+        - subnet: 172.31.0.0/24  # ← Nueva subred que no colisiona
