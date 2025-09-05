@@ -59,7 +59,10 @@ BACKUP_FILE="$DEST_DIR/backup_$(date +%Y%m%d_%H%M%S).tar.gz"
 # Hacer mysqldump antes de detener los contenedores #
 # ------------------------------------------------- #
 # Obtener el nombre del contenedor que ejecuta la imagen FacturaScripts
-MYSQL_CONTAINER=$(docker ps --format '{{.Names}}' | grep '^mysql_mysql' | head -n1)
+# La línea siguiente busca contenedores cuyo nombre comienza con 'mysql_mysql'
+# MYSQL_CONTAINER=$(docker ps --format '{{.Names}}' | grep '^mysql_mysql' | head -n1)
+# Pero mi contenedor empieza por '002-mysql_mysql_1', así que uso la línea siguiente que busca el contenedor que contenga 'mysql_mysql'
+MYSQL_CONTAINER=$(docker ps --format '{{.Names}}' | grep 'mysql_mysql' | head -n1)
 if [ -z "$MYSQL_CONTAINER" ]; then
     echo "[$(date)] ❌ Contenedor de mySql no encontrado o no está corriendo." >> "$LOGFILE"
     exit 1
