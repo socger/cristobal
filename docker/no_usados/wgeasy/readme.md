@@ -1,1 +1,0 @@
-Directorio volume usado por un stack de Docker
