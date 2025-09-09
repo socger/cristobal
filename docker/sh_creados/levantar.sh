@@ -1,39 +1,45 @@
 #!/bin/bash
 
 # ------------------------------------------------- #
-# Función para escalar servicios de un stack        #
+# Función para imprimir mensajes en logs y terminal #
 # ------------------------------------------------- #
-scale_stack_services() {
-  local stack=$1
-  local replicas=$2
-
-  echo "Escalando servicios del stack '$stack' a $replicas réplica(s)..."
-
-  # Obtener todos los servicios del stack
-  SERVICES=$(docker stack services "$stack" --format '{{.Name}}')
-
-  for service in $SERVICES; do
-    echo "  Escalando servicio $service a $replicas..."
-    docker service scale "$service=$replicas"
-  done
-}
+source fn_msg.sh
 
 # ------------------------------------------------- #
-# Paramos stacks y contenedores y realizamos copia  #
+# Funciones para escalar servicios de stacks        #
 # ------------------------------------------------- #
-# Obtener todos los stacks levantados
+source fn_scale_stacks.sh
+source fn_scale_services.sh
+
+# ------------------------------------------------- #
+# Preparamos algunas variables y creaos directorios #
+# ------------------------------------------------- #
+# Fecha y nombre del fichero que guardará los log
+FECHA=$(date +%Y%m%d)
+LOGFILE="/docker/logs/backup_with_docker_pause_$FECHA.log"
+
+# Obtener todos los stacks existentes. Levantados o no levantados.
 STACKS=$(docker stack ls --format '{{.Name}}')
+
+msg " " "$LOGFILE"
+msg " " "$LOGFILE"
+msg "*******************************************************" "$LOGFILE"
+msg "[$(date)]" "$LOGFILE"
+msg "INICIO - LEVANTANDO SERVICIOS DE STACKS" "$LOGFILE"
+msg "*******************************************************" "$LOGFILE"
+
+# ------------------------------------------------- #
+# Recorremos los stacks y se escalan a 1 servicio   #
+# ------------------------------------------------- #
 if [ -n "$STACKS" ]; then
-    echo "Stacks detectados: $STACKS"
-
-
-    # Escalar todos los servicios de todos los stacks a 0 (pausar)
-    for stack in $STACKS; do
-      scale_stack_services "$stack" 1
-    done
-
-    echo "Todos los servicios escalados a 1."
+    scale_stacks "$STACKS" 1 "$LOGFILE"
 else
-    echo "No hay stacks en ejecución." >> "$LOGFILE"
-    echo "No puedo hacer copia de seguridad." >> "$LOGFILE"
+    msg "No hay stacks creados. Por lo que no puedo levantar ninguno." "$LOGFILE"
 fi
+
+msg " " "$logfile"
+msg "*********************************************" "$LOGFILE"
+msg "[$(date)]" "$LOGFILE"
+msg "- FIN - LEVANTANDO SERVICIOS DE STACKS       " "$LOGFILE"
+msg "*********************************************" "$LOGFILE"
+
