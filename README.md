@@ -1,12 +1,13 @@
 # Proyecto Cristobal
 
 ## Descripción
-Sistema de gestión con Docker que incluye FacturaScripts y Portainer
+Sistema de gestión con Docker que incluye Traefik, mySQL, FacturaScripts y Portainer
 Con tareas automatizadas de backup.
 
 ## Estructura del proyecto
 - `/crontab/` - Configuración de tareas programadas
-- `/docker/` - Configuración y scripts de Docker
+- `/docker/` - Se ha creado una estructura/esqueleto de los volúmenes usados por los stacks (.yml).
+- `/docker/portainer/stacks` - Stacks/scripts (.yml) que se levantarán en un Docker Swarm
 - `TODO` - Lista de tareas pendientes
 
 ## Características
