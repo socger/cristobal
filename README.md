@@ -1,7 +1,8 @@
 # Proyecto Cristobal
 
 ## Descripción
-Sistema de gestión con Docker que incluye FacturaScripts y tareas automatizadas de backup.
+Sistema de gestión con Docker que incluye FacturaScripts y Portainer
+Con tareas automatizadas de backup.
 
 ## Estructura del proyecto
 - `/crontab/` - Configuración de tareas programadas
