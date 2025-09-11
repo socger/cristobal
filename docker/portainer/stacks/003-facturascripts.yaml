@@ -47,12 +47,13 @@ services:
         constraints: [node.role == manager]
       labels:
         - "traefik.enable=true"
+        - "traefik.http.services.facturascripts.loadbalancer.server.port=80"
         - "traefik.http.routers.facturascripts.rule=Host(`cortinascristobal-fs.duckdns.org`)"
         - "traefik.http.routers.facturascripts.entrypoints=websecure"
         - "traefik.http.routers.facturascripts.priority=1"
+        - "traefik.http.routers.facturascripts.tls=true"
         - "traefik.http.routers.facturascripts.tls.certresolver=le"
         - "traefik.http.routers.facturascripts.service=facturascripts"
-        - "traefik.http.services.facturascripts.loadbalancer.server.port=80"
 
 networks:
   shared_backend:
