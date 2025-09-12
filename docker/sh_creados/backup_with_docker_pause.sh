@@ -7,15 +7,15 @@ source fn_msg.sh
 source fn_scale_stacks.sh
 source fn_scale_services.sh
 
+# Cargamos función para obtener fecha y archivo de log
+source fn_get_data_logfile.sh
+
 # Eliminamos todos los contenedores detenidos, (es decir, los que tienen estado exited, dead o que no están en ejecución).
 docker container prune -f
 
 # Preparamos algunas variables y creamos directorios necesarios
-# Fecha actual del sistema
-FECHA=$(date +%Y%m%d)
-
-# Nombre del fichero que guardará los log
-LOGFILE="/docker/logs/backup_with_docker_pause_$FECHA.log"
+# Obtenemos fecha actual del sistema y nombre del fichero ue guardará los log
+read FECHA LOGFILE <<< "$(get_date_and_logfile)"
 
 # Ruta del disco USB
 DISK_USB="/dev/sdb1"
