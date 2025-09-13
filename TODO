@@ -3,7 +3,8 @@ Copiar en vsCode de Cristobal todo lo que me falta:
 
 Las copias de seguridad comprobar si están funcionando a las 8:45pm y si se apaga el servidor tras la copia realizada
 SI QUE LO HACE, si no hay ningún error. 
-El ultimo error corregido fué que al intentar montar el HD (usb) de copias, si este estaba ya montado daba un error.
+
+Modificar cronTab para que las copias de seguridad de los sábados las haga a las 13:45pm
 
 Crear un proceso que haga copias en la nube, intentar usar un drive de gmail ó hotmail (15gb gratuitas) ... ver que le pregunté en su día a la IA
 

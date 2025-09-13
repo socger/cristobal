@@ -21,8 +21,14 @@
 # For more information see the manual pages of crontab(5) and cron(8)
 #
 
+# Se ejecutará de lunes a viernes a las 8:45pm
+# 45 20 * * 1-5 /docker/sh_creados/backup_with_docker_pause.sh
+
 # Se ejecutará cada día a las 8:45pm
 45 20 * * * /docker/sh_creados/backup_with_docker_pause.sh
+
+# Se ejecutará cada sábado a las 1:45pm
+45 13 * * 6 /docker/sh_creados/backup_with_docker_pause.sh
 
 # Se ejecutará cada 5 minutos
 */5 * * * * /docker/sh_creados/facturascripts_cron.sh
