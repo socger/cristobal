@@ -128,14 +128,70 @@ if [ -n "$STACKS" ]; then
     msg ". " "$LOGFILE"
 
     # Crear la copia de seguridad
-    tar -czvf "$BACKUP_FILE" -C "$(dirname "$SOURCE_DIR")" "$(basename "$SOURCE_DIR")"
-    if [ $? -eq 0 ]; then
-        msg "[$(date)] ✅ Copia de seguridad creada exitosamente en $BACKUP_FILE" "$LOGFILE"
+    msg "[$(date)] Iniciando compresión de archivos (progreso visible)..." "$LOGFILE"
+    msg "[$(date)] Fase 1: Copiando archivos principales (excluyendo logs)..." "$LOGFILE"
 
-        # NUEVA FUNCIÓN: Subir a Google Drive
-        upload_to_gdrive "$BACKUP_FILE" "$LOGFILE"
+    # CAMBIO: Crear archivo .tar SIN comprimir primero
+    BACKUP_FILE_TAR="$DEST_DIR/backup_$(date +%Y%m%d_%H%M%S).tar"
+    BACKUP_FILE="$DEST_DIR/backup_$(date +%Y%m%d_%H%M%S).tar.gz"
+
+    tar -cvf "$BACKUP_FILE_TAR" -C "$(dirname "$SOURCE_DIR")" \
+        --exclude="docker/logs" \
+        --exclude="docker/logs/*" \
+        "$(basename "$SOURCE_DIR")" \
+        2>&1 | tee -a "$LOGFILE"
+
+    # Capturar el código de salida del tar (no del tee)
+    TAR_EXIT_CODE=${PIPESTATUS[0]}
+
+    if [ $TAR_EXIT_CODE -eq 0 ]; then
+        msg "[$(date)] ✅ Fase 1 completada: Archivos principales copiados" "$LOGFILE"
+
+        # Fase 2: Añadir los logs al archivo .tar
+        msg "[$(date)] Fase 2: Añadiendo logs al backup..." "$LOGFILE"
+
+        tar -rvf "$BACKUP_FILE_TAR" -C "$(dirname "$SOURCE_DIR")" "docker/logs" >/dev/null 2>&1
+        TAR_LOGS_EXIT_CODE=$?
+
+        if [ $TAR_LOGS_EXIT_CODE -eq 0 ]; then
+            msg "[$(date)] ✅ Fase 2 completada: Logs añadidos al backup" "$LOGFILE"
+        else
+            msg "[$(date)] ⚠️ Warning: Error al añadir logs (código: $TAR_LOGS_EXIT_CODE)" "$LOGFILE"
+            msg "[$(date)] ✅ Backup principal completado, continuando sin logs..." "$LOGFILE"
+        fi
+
+        # Fase 3: Comprimir el archivo final
+        msg "[$(date)] Fase 3: Comprimiendo archivo final..." "$LOGFILE"
+
+        if gzip "$BACKUP_FILE_TAR"; then
+            # gzip automáticamente renombra .tar a .tar.gz Y elimina el .tar original
+            msg "[$(date)] ✅ Archivo comprimido exitosamente" "$LOGFILE"
+            msg "[$(date)] ✅ Copia de seguridad creada exitosamente en $BACKUP_FILE" "$LOGFILE"
+
+            # NUEVA FUNCIÓN: Subir a Google Drive
+            upload_to_gdrive "$BACKUP_FILE" "$LOGFILE"
+        else
+            msg "[$(date)] ❌ Error al comprimir el archivo .tar" "$LOGFILE"
+            msg "[$(date)] 🧹 Eliminando archivo .tar temporal..." "$LOGFILE"
+            rm -f "$BACKUP_FILE_TAR"
+
+            # Levantamos los stacks, contenedores y sus servicios
+            scale_stacks "$STACKS" 1 "$LOGFILE"
+
+            # Desmontamos el dispositivo usb de copias 
+            desmontar_hd "$MOUNT_DISK_USB" "$DISK_USB" "$LOGFILE"
+
+            exit 1
+        fi
+
     else
-        msg "[$(date)] ❌ Error al crear la copia de seguridad" "$LOGFILE"
+        msg "[$(date)] ❌ Error al crear la copia de seguridad (código: $TAR_EXIT_CODE)" "$LOGFILE"
+
+        # Limpiar archivo temporal si existe
+        if [ -f "$BACKUP_FILE_TAR" ]; then
+            msg "[$(date)] 🧹 Eliminando archivo .tar temporal..." "$LOGFILE"
+            rm -f "$BACKUP_FILE_TAR"
+        fi
 
         # Levantamos los stacks, contenedores y sus servicios
         scale_stacks "$STACKS" 1 "$LOGFILE"
