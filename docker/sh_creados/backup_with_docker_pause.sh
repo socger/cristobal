@@ -13,6 +13,9 @@ source fn_get_data_logfile.sh
 # Load function to unmount the USB backup device
 source fn_desmontar_hd.sh
 
+# Load function to mount the USB backup device
+source fn_montar_hd.sh
+
 # Load function to upload backup to Google Drive using rclone
 source fn_upload_to_gdrive.sh
 
@@ -47,34 +50,7 @@ if [ -n "$STACKS" ]; then
     desmontar_hd "$MOUNT_DISK_USB" "$DISK_USB" "$LOGFILE"
 
     # Montar el dispositivo
-    if mount | grep "$MOUNT_DISK_USB" > /dev/null; then
-        msg "[$(date)] Dispositivo ya montado en $MOUNT_DISK_USB" "$LOGFILE"
-    else
-        # Intentar montaje con NTFS primero (más probable en USB)
-        if mount -t ntfs-3g "$DISK_USB" "$MOUNT_DISK_USB" 2>/dev/null; then
-            msg "[$(date)] Dispositivo USB montado correctamente (NTFS)." "$LOGFILE"
-        elif mount "$DISK_USB" "$MOUNT_DISK_USB" 2>/dev/null; then
-            msg "[$(date)] Dispositivo USB montado correctamente." "$LOGFILE"
-        else
-            msg "[$(date)] Error: No se pudo montar $DISK_USB" "$LOGFILE"
-            msg "[$(date)] Intentando reparar el sistema de archivos..." "$LOGFILE"
-
-            # Intentar reparación automática
-            if command -v ntfsfix >/dev/null 2>&1; then
-                ntfsfix "$DISK_USB" >> "$LOGFILE" 2>&1
-                # Reintentar montaje después de la reparación
-                if mount -t ntfs-3g "$DISK_USB" "$MOUNT_DISK_USB" 2>/dev/null; then
-                    msg "[$(date)] Dispositivo USB reparado y montado correctamente." "$LOGFILE"
-                else
-                    msg "[$(date)] Error: No se pudo montar $DISK_USB incluso después de la reparación" "$LOGFILE"
-                    exit 1
-                fi
-            else
-                msg "[$(date)] ntfsfix no disponible. No se pudo reparar automáticamente." "$LOGFILE"
-                exit 1
-            fi
-        fi
-    fi
+    montar_hd "$MOUNT_DISK_USB" "$DISK_USB" "$LOGFILE"
 
     # Levantamos los stacks, contenedores y sus servicios. Por si no se hubieran quedado levantados desde la última copia
     # o por si alguno estuviera parado manualmente.
@@ -246,4 +222,4 @@ msg "---------------------------------------------" "$LOGFILE"
 msg "- FIN DE LA COPIA                           -" "$LOGFILE"
 msg "---------------------------------------------" "$LOGFILE"
 
-# sudo poweroff
+sudo poweroff
