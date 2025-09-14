@@ -2,7 +2,7 @@
 desmontar_hd() {
     local mount_disk_usb=$1
     local disk_usb=$2
-    local logfile=$2
+    local logfile=$3
 
     # Unmount the USB backup device
     umount "$mount_disk_usb"
