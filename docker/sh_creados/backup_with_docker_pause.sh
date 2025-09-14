@@ -10,6 +10,12 @@ source fn_scale_services.sh
 # Cargamos función para obtener fecha y archivo de log
 source fn_get_data_logfile.sh
 
+# Load function to unmount the USB backup device
+source fn_desmontar_hd.sh
+
+# Load function to upload backup to Google Drive using rclone
+source fn_upload_to_gdrive.sh
+
 # Eliminamos todos los contenedores detenidos, (es decir, los que tienen estado exited, dead o que no están en ejecución).
 docker container prune -f
 
@@ -38,7 +44,7 @@ if [ -n "$STACKS" ]; then
     mkdir -p "$MOUNT_DISK_USB"
 
     # Lo desmontamos por si estuviera montado por otra app o usuario el disco usb
-    sudo umount "$DISK_USB"
+    desmontar_hd "$MOUNT_DISK_USB" "$DISK_USB" "$LOGFILE"
 
     # Montar el dispositivo
     if mount | grep "$MOUNT_DISK_USB" > /dev/null; then
@@ -104,10 +110,22 @@ if [ -n "$STACKS" ]; then
     msg "[$(date)] Haciendo copia de seguridad de $SOURCE_DIR a $BACKUP_FILE ..." "$LOGFILE"
     msg ". " "$LOGFILE"
 
-    if tar -czvf "$BACKUP_FILE" -C "$(dirname "$SOURCE_DIR")" "$(basename "$SOURCE_DIR")"; then
-        msg "[$(date)] Copia completada." "$LOGFILE"
+    # Crear la copia de seguridad
+    tar -czvf "$BACKUP_FILE" -C "$(dirname "$SOURCE_DIR")" "$(basename "$SOURCE_DIR")"
+    if [ $? -eq 0 ]; then
+        msg "[$(date)] ✅ Copia de seguridad creada exitosamente en $BACKUP_FILE" "$LOGFILE"
+
+        # NUEVA FUNCIÓN: Subir a Google Drive
+        upload_to_gdrive "$BACKUP_FILE" "$LOGFILE"
     else
-        msg "[$(date)] Error durante la copia de seguridad." "$LOGFILE"
+        msg "[$(date)] ❌ Error al crear la copia de seguridad" "$LOGFILE"
+
+        # Levantamos los stacks, contenedores y sus servicios
+        scale_stacks "$STACKS" 1 "$LOGFILE"
+
+        # Desmontamos el dispositivo usb de copias 
+        desmontar_hd "$MOUNT_DISK_USB" "$DISK_USB" "$LOGFILE"
+
         exit 1
     fi
 
@@ -127,15 +145,7 @@ if [ -n "$STACKS" ]; then
     scale_stacks "$STACKS" 1 "$LOGFILE"
 
     # Desmontamos el dispositivo usb de copias 
-    umount "$MOUNT_DISK_USB"
-
-    if [ $? -ne 0 ]; then
-        msg "[$(date)] Error: No se pudo desmontar $MOUNT_DISK_USB" "$LOGFILE"
-        msg "Vamos a obligar su desmontaje con el comando ... sudo umount '$DISK_USB'" "$LOGFILE"
-        sudo umount "$DISK_USB"
-    fi
-
-    msg "[$(date)] Dispositivo USB desmontado correctamente." "$LOGFILE"
+    desmontar_hd "$MOUNT_DISK_USB" "$DISK_USB" "$LOGFILE"
 
     # Borramos log's antiguos, de más de dos días 
     # Calcular la fecha de hace dos días en el mismo formato
@@ -163,4 +173,4 @@ msg "---------------------------------------------" "$LOGFILE"
 msg "- FIN DE LA COPIA                           -" "$LOGFILE"
 msg "---------------------------------------------" "$LOGFILE"
 
-sudo poweroff
+# sudo poweroff
