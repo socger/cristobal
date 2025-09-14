@@ -50,12 +50,29 @@ if [ -n "$STACKS" ]; then
     if mount | grep "$MOUNT_DISK_USB" > /dev/null; then
         msg "[$(date)] Dispositivo ya montado en $MOUNT_DISK_USB" "$LOGFILE"
     else
-        mount "$DISK_USB" "$MOUNT_DISK_USB"
-        if [ $? -ne 0 ]; then
-            msg "[$(date)] Error: No se pudo montar $DISK_USB" "$LOGFILE"
-            exit 1
-        else
+        # Intentar montaje con NTFS primero (más probable en USB)
+        if mount -t ntfs-3g "$DISK_USB" "$MOUNT_DISK_USB" 2>/dev/null; then
+            msg "[$(date)] Dispositivo USB montado correctamente (NTFS)." "$LOGFILE"
+        elif mount "$DISK_USB" "$MOUNT_DISK_USB" 2>/dev/null; then
             msg "[$(date)] Dispositivo USB montado correctamente." "$LOGFILE"
+        else
+            msg "[$(date)] Error: No se pudo montar $DISK_USB" "$LOGFILE"
+            msg "[$(date)] Intentando reparar el sistema de archivos..." "$LOGFILE"
+
+            # Intentar reparación automática
+            if command -v ntfsfix >/dev/null 2>&1; then
+                ntfsfix "$DISK_USB" >> "$LOGFILE" 2>&1
+                # Reintentar montaje después de la reparación
+                if mount -t ntfs-3g "$DISK_USB" "$MOUNT_DISK_USB" 2>/dev/null; then
+                    msg "[$(date)] Dispositivo USB reparado y montado correctamente." "$LOGFILE"
+                else
+                    msg "[$(date)] Error: No se pudo montar $DISK_USB incluso después de la reparación" "$LOGFILE"
+                    exit 1
+                fi
+            else
+                msg "[$(date)] ntfsfix no disponible. No se pudo reparar automáticamente." "$LOGFILE"
+                exit 1
+            fi
         fi
     fi
 
