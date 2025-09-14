@@ -1,12 +1,7 @@
-Copiar en vsCode de Cristobal todo lo que me falta:
-	/Docker
-
-Las copias de seguridad comprobar si están funcionando a las 8:45pm y si se apaga el servidor tras la copia realizada
-SI QUE LO HACE, si no hay ningún error. 
-
-Modificar cronTab para que las copias de seguridad de los sábados las haga a las 13:45pm
+Ver si la copia última que se hizo el domingo pasado (14/09/2025) está completa y bien.
 
 Crear un proceso que haga copias en la nube, intentar usar un drive de gmail ó hotmail (15gb gratuitas) ... ver que le pregunté en su día a la IA
+Se ha creado y no funciona ... comentarle a la IA lo que ocurre ... mirar los logs
 
 ACTUALIZAR cambios en gitHub ... SIEMPRE
 
