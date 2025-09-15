@@ -22,6 +22,9 @@ source fn_upload_to_gdrive.sh
 # Load function to create the zip backup
 source fn_create_zip_backup.sh
 
+# Cargamos función para verificar servicios de stacks
+source fn_verificar_servicios.sh
+
 # Eliminamos todos los contenedores detenidos, (es decir, los que tienen estado exited, dead o que no están en ejecución).
 docker container prune -f
 
