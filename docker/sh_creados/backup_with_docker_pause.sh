@@ -19,6 +19,9 @@ source fn_montar_hd.sh
 # Load function to upload backup to Google Drive using rclone
 source fn_upload_to_gdrive.sh
 
+# Load function to create the zip backup
+source fn_create_zip_backup.sh
+
 # Eliminamos todos los contenedores detenidos, (es decir, los que tienen estado exited, dead o que no están en ejecución).
 docker container prune -f
 
@@ -34,6 +37,18 @@ MOUNT_DISK_USB="/mnt/mount_disk_usb"
 
 # Ruta donde se guardará la copia de seguridad
 DEST_DIR="$MOUNT_DISK_USB/backup"
+
+# Ruta de la carpeta a respaldar
+SOURCE_DIR="/docker"
+
+# Nombre del archivo de respaldo (con fecha y hora)
+BACKUP_FILE="$DEST_DIR/backup_$(date +%Y%m%d_%H%M%S).tar.gz"
+
+# Variables para mysql
+MYSQL_USER="root"
+MYSQL_PASSWORD="sasa"
+DUMP_DIR="$SOURCE_DIR/mysql_dump_temp"
+MYSQL_DUMP_FILE="$DUMP_DIR/mysql_dump_$(date +%Y%m%d_%H%M%S).sql"
 
 msg "---------------------------------------------" "$LOGFILE"
 msg "- INICIO DE LA COPIA                        -" "$LOGFILE"
@@ -59,12 +74,6 @@ if [ -n "$STACKS" ]; then
     # Crear carpeta de destino si no existe
     mkdir -p "$DEST_DIR"
 
-    # Ruta de la carpeta a respaldar
-    SOURCE_DIR="/docker"
-
-    # Nombre del archivo de respaldo (con fecha y hora)
-    BACKUP_FILE="$DEST_DIR/backup_$(date +%Y%m%d_%H%M%S).tar.gz"
-
     # Hacer mysqldump antes de detener los contenedores #
 
     # Obtener el nombre del contenedor que ejecuta la imagen FacturaScripts
@@ -77,11 +86,6 @@ if [ -n "$STACKS" ]; then
         msg "[$(date)] ❌ Contenedor de mySql no encontrado o no está corriendo." "$LOGFILE"
         exit 1
     fi
-
-    MYSQL_USER="root"
-    MYSQL_PASSWORD="sasa"
-    DUMP_DIR="$SOURCE_DIR/mysql_dump_temp"
-    MYSQL_DUMP_FILE="$DUMP_DIR/mysql_dump_$(date +%Y%m%d_%H%M%S).sql"
 
     # Crear carpeta temporal para el dump
     mkdir -p "$DUMP_DIR"
@@ -99,87 +103,8 @@ if [ -n "$STACKS" ]; then
     # Paramos stacks, contenedores y sus servicios para realizar sus copias 
     scale_stacks "$STACKS" 0 "$LOGFILE"
 
-    msg ". " "$LOGFILE"
-    msg "[$(date)] Haciendo copia de seguridad de $SOURCE_DIR a $BACKUP_FILE ..." "$LOGFILE"
-    msg ". " "$LOGFILE"
-
-    # Crear la copia de seguridad
-    msg "[$(date)] Iniciando compresión de archivos (progreso visible)..." "$LOGFILE"
-    msg "[$(date)] Fase 1: Copiando archivos principales (excluyendo logs)..." "$LOGFILE"
-
-    # CAMBIO: Crear archivo .tar SIN comprimir primero
-    BACKUP_FILE_TAR="$DEST_DIR/backup_$(date +%Y%m%d_%H%M%S).tar"
-    BACKUP_FILE="$DEST_DIR/backup_$(date +%Y%m%d_%H%M%S).tar.gz"
-
-    tar -cvf "$BACKUP_FILE_TAR" -C "$(dirname "$SOURCE_DIR")" \
-        --exclude="docker/logs" \
-        --exclude="docker/logs/*" \
-        "$(basename "$SOURCE_DIR")" \
-        2>&1 | tee -a "$LOGFILE"
-
-    # Capturar el código de salida del tar (no del tee)
-    TAR_EXIT_CODE=${PIPESTATUS[0]}
-
-    if [ $TAR_EXIT_CODE -eq 0 ]; then
-        msg "[$(date)] ✅ Fase 1 completada: Archivos principales copiados" "$LOGFILE"
-
-        # Fase 2: Añadir los logs al archivo .tar
-        msg "[$(date)] Fase 2: Añadiendo logs al backup..." "$LOGFILE"
-
-        tar -rvf "$BACKUP_FILE_TAR" -C "$(dirname "$SOURCE_DIR")" "docker/logs" >/dev/null 2>&1
-        TAR_LOGS_EXIT_CODE=$?
-
-        if [ $TAR_LOGS_EXIT_CODE -eq 0 ]; then
-            msg "[$(date)] ✅ Fase 2 completada: Logs añadidos al backup" "$LOGFILE"
-        else
-            msg "[$(date)] ⚠️ Warning: Error al añadir logs (código: $TAR_LOGS_EXIT_CODE)" "$LOGFILE"
-            msg "[$(date)] ✅ Backup principal completado, continuando sin logs..." "$LOGFILE"
-        fi
-
-        # Fase 3: Comprimir el archivo final
-        msg "[$(date)] Fase 3: Comprimiendo archivo final..." "$LOGFILE"
-
-        if gzip "$BACKUP_FILE_TAR"; then
-            # gzip automáticamente renombra .tar a .tar.gz Y elimina el .tar original
-            msg "[$(date)] ✅ Archivo comprimido exitosamente" "$LOGFILE"
-            msg "[$(date)] ✅ Copia de seguridad creada exitosamente en $BACKUP_FILE" "$LOGFILE"
-
-            # NUEVA FUNCIÓN: Subir a Google Drive
-            upload_to_gdrive "$BACKUP_FILE" "$LOGFILE"
-        else
-            msg "[$(date)] ❌ Error al comprimir el archivo .tar" "$LOGFILE"
-            msg "[$(date)] 🧹 Eliminando archivo .tar temporal..." "$LOGFILE"
-            rm -f "$BACKUP_FILE_TAR"
-
-            # Levantamos los stacks, contenedores y sus servicios
-            scale_stacks "$STACKS" 1 "$LOGFILE"
-
-            # Desmontamos el dispositivo usb de copias 
-            desmontar_hd "$MOUNT_DISK_USB" "$DISK_USB" "$LOGFILE"
-
-            exit 1
-        fi
-
-    else
-        msg "[$(date)] ❌ Error al crear la copia de seguridad (código: $TAR_EXIT_CODE)" "$LOGFILE"
-
-        # Limpiar archivo temporal si existe
-        if [ -f "$BACKUP_FILE_TAR" ]; then
-            msg "[$(date)] 🧹 Eliminando archivo .tar temporal..." "$LOGFILE"
-            rm -f "$BACKUP_FILE_TAR"
-        fi
-
-        # Levantamos los stacks, contenedores y sus servicios
-        scale_stacks "$STACKS" 1 "$LOGFILE"
-
-        # Desmontamos el dispositivo usb de copias 
-        desmontar_hd "$MOUNT_DISK_USB" "$DISK_USB" "$LOGFILE"
-
-        exit 1
-    fi
-
-    # Esperar a que termine la copia
-    sync
+    # Creamos la copia de seguridad en el disco USB
+    create_zip_backup "$MOUNT_DISK_USB" "$DISK_USB" "$LOGFILE" "$SOURCE_DIR" "$DEST_DIR" "$BACKUP_FILE" "$STACKS"
 
     # Eliminar el dump temporal
     rm -rf "$DUMP_DIR"
@@ -222,4 +147,4 @@ msg "---------------------------------------------" "$LOGFILE"
 msg "- FIN DE LA COPIA                           -" "$LOGFILE"
 msg "---------------------------------------------" "$LOGFILE"
 
-sudo poweroff
+# sudo poweroff
