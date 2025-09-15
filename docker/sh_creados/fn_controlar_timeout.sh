@@ -7,7 +7,8 @@ controlar_timeout() {
     # msg "  ⚠️ TIMEOUT: Servicio $param_service tardó más de 60s en escalar" "$param_logfile"
     # msg "  ⚠️ Continuando con el siguiente servicio..." "$param_logfile"
 
-JEROFA VAS POR AQUI
+JEROFA VAS POR AQUI ... MIRA EL ULTIMO COMMIT SUBIDO A GITHUB PORQUE ESOS CAMBIOS EN LOS MODULOS 
+TODAVIA NO ESTAN EN EL EL SERVIDOR DE CRISTOBAL
 
 
 
