@@ -25,6 +25,9 @@ source fn_create_zip_backup.sh
 # Cargamos función para verificar servicios de stacks
 source fn_verificar_servicios.sh
 
+# Cargamos función para controlar timeout al escalar servicios
+source fn_controlar_timeout.sh
+
 # Eliminamos todos los contenedores detenidos, (es decir, los que tienen estado exited, dead o que no están en ejecución).
 docker container prune -f
 
@@ -150,4 +153,4 @@ msg "---------------------------------------------" "$LOGFILE"
 msg "- FIN DE LA COPIA                           -" "$LOGFILE"
 msg "---------------------------------------------" "$LOGFILE"
 
-sudo poweroff
+#sudo poweroff
