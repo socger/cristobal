@@ -153,4 +153,4 @@ msg "---------------------------------------------" "$LOGFILE"
 msg "- FIN DE LA COPIA                           -" "$LOGFILE"
 msg "---------------------------------------------" "$LOGFILE"
 
-#sudo poweroff
+sudo poweroff

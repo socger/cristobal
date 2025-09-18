@@ -5,7 +5,7 @@ create_zip_backup() {
     local param_logfile=$3
     local param_source_dir=$4
     local param_dest_dir=$5
-    local param_backup_file=$6
+    local param_backup_file=$6  # ← USAR ESTE NOMBRE
     local param_stacks=$7
 
     msg ". " "$param_logfile"
@@ -16,8 +16,8 @@ create_zip_backup() {
     msg "[$(date)] Iniciando compresión de archivos (progreso visible)..." "$param_logfile"
     msg "[$(date)] Fase 1: Copiando archivos principales (excluyendo logs)..." "$param_logfile"
 
-    # CAMBIO: Crear archivo .tar SIN comprimir primero
-    file_tar="$param_dest_dir/backup_$(date +%Y%m%d_%H%M%S).tar"
+    # CAMBIO: Usar el nombre pasado como parámetro, no generar uno nuevo
+    file_tar="${param_backup_file%.tar.gz}.tar"  # Quitar .tar.gz y añadir .tar
 
     tar -cvf "$file_tar" -C "$(dirname "$param_source_dir")" \
         --exclude="docker/logs" \
@@ -50,10 +50,20 @@ create_zip_backup() {
         if gzip "$file_tar"; then
             # gzip automáticamente renombra .tar a .tar.gz Y elimina el .tar original
             msg "[$(date)] ✅ Archivo comprimido exitosamente" "$param_logfile"
-            msg "[$(date)] ✅ Copia de seguridad creada exitosamente en $param_backup_file" "$param_logfile"
 
-            # NUEVA FUNCIÓN: Subir a Google Drive
-            upload_to_gdrive "$param_backup_file" "$param_logfile"
+            # VALIDACIÓN: Verificar que el archivo final existe
+            if [ -f "$param_backup_file" ]; then
+                msg "[$(date)] ✅ Copia de seguridad creada exitosamente en $param_backup_file" "$param_logfile"
+                msg "[$(date)] 📊 Tamaño del archivo: $(du -h "$param_backup_file" | cut -f1)" "$param_logfile"
+
+                # NUEVA FUNCIÓN: Subir a Google Drive
+                upload_to_gdrive "$param_backup_file" "$param_logfile"
+            else
+                msg "[$(date)] ❌ ERROR: El archivo final no existe después de gzip: $param_backup_file" "$param_logfile"
+                msg "[$(date)] 🔍 Archivos en el directorio:" "$param_logfile"
+                ls -la "$param_dest_dir/" >> "$param_logfile" 2>&1
+                return 1
+            fi
         else
             msg "[$(date)] ❌ Error al comprimir el archivo .tar" "$param_logfile"
             msg "[$(date)] 🧹 Eliminando archivo .tar temporal..." "$param_logfile"
