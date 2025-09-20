@@ -30,6 +30,9 @@ source fn_verificar_servicios.sh
 # Cargamos función para controlar timeout al escalar servicios
 source fn_controlar_timeout.sh
 
+# Cargamos función para borrar logs antiguos
+source fn_delete_logs.sh
+
 # Eliminamos todos los contenedores detenidos, (es decir, los que tienen estado exited, dead o que no están en ejecución).
 docker container prune -f
 
@@ -130,21 +133,7 @@ if [ -n "$STACKS" ]; then
     desmontar_hd "$MOUNT_DISK_USB" "$DISK_USB" "$LOGFILE"
 
     # Borramos log's antiguos, de más de dos días 
-    # Calcular la fecha de hace dos días en el mismo formato
-    FECHA_LIMITE=$(date -d "-2 days" +%Y%m%d)
-
-    # Borrar archivos cuyo nombre contiene fechas anteriores a FECHA_LIMITE
-    for file in /docker/logs/backup_with_docker_pause_*.log; do
-        # Extraer fecha del nombre del archivo
-        filename=$(basename "$file")
-        fecha_archivo=$(echo "$filename" | grep -oP '\d{8}')
-
-        # Comparar fechas numéricamente
-        if [[ "$fecha_archivo" =~ ^[0-9]{8}$ ]] && [[ "$fecha_archivo" -le "$FECHA_LIMITE" ]]; then
-            msg "[$(date)] Borrando log antiguo: $file" "$LOGFILE"
-            rm "$file"
-        fi
-    done
+    delete_logs 2
 else
     msg ". " "$LOGFILE"
     msg "[$(date)] No hay stacks creados. Por lo que no puedo hacer copia de ellos." "$LOGFILE"
