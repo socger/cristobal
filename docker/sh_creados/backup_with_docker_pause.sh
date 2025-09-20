@@ -1,5 +1,7 @@
 #!/bin/bash
 
+cd /docker/sh_creados/
+
 # Cargamos función para imprimir mensajes en logs y terminal
 source fn_msg.sh
 
