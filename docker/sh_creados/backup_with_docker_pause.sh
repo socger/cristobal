@@ -1,6 +1,15 @@
 #!/bin/bash
 
-cd /docker/sh_creados/
+# Cargar configuración
+[ -f ".env" ] && source .env
+
+# Valores por defecto si no se cargó .env
+LOGS_DIR="${LOGS_DIR:-/docker/logs}"
+SCRIPTS_DIR="${SCRIPTS_DIR:-/docker/sh_creados}"
+SOURCE_DIR="${SOURCE_DIR:-/docker}"
+
+# Nos situamos en el directorio de los scripts
+cd "$SCRIPTS_DIR"
 
 # Cargamos función para imprimir mensajes en logs y terminal
 source fn_msg.sh
@@ -48,9 +57,6 @@ MOUNT_DISK_USB="/mnt/mount_disk_usb"
 
 # Ruta donde se guardará la copia de seguridad
 DEST_DIR="$MOUNT_DISK_USB/backup"
-
-# Ruta de la carpeta a respaldar
-SOURCE_DIR="/docker"
 
 # Nombre del archivo de respaldo (con fecha y hora)
 BACKUP_FILE="$DEST_DIR/backup_$(date +%Y%m%d_%H%M%S).tar.gz"
