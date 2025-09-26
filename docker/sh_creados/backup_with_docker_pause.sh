@@ -7,6 +7,7 @@
 LOGS_DIR="${LOGS_DIR:-/docker/logs}"
 SCRIPTS_DIR="${SCRIPTS_DIR:-/docker/sh_creados}"
 SOURCE_DIR="${SOURCE_DIR:-/docker}"
+LOG_FILE_BASENAME="${LOG_FILE_BASENAME:-backup_with_docker_pause_}"
 
 # Nos situamos en el directorio de los scripts
 cd "$SCRIPTS_DIR"
@@ -46,7 +47,7 @@ source fn_delete_logs.sh
 docker container prune -f
 
 # Preparamos algunas variables y creamos directorios necesarios
-# Obtenemos fecha actual del sistema y nombre del fichero ue guardará los log
+# Obtenemos fecha actual del sistema y nombre del fichero que guardará los log
 read FECHA LOGFILE <<< "$(get_date_and_logfile)"
 
 # Ruta del disco USB
@@ -139,7 +140,7 @@ if [ -n "$STACKS" ]; then
     desmontar_hd "$MOUNT_DISK_USB" "$DISK_USB" "$LOGFILE"
 
     # Borramos log's antiguos, de más de dos días 
-    delete_logs 2
+    delete_logs 2 "$LOG_FILE_BASENAME" "$LOGFILE"
 else
     msg ". " "$LOGFILE"
     msg "[$(date)] No hay stacks creados. Por lo que no puedo hacer copia de ellos." "$LOGFILE"

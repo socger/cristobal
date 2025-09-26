@@ -5,10 +5,19 @@ Descargar de la nube uno de los zip y comprobar si está todo ok
 
 He creado el método delete_logs() para borrar los log's más old ... comprobar si funciona
 
+REVISAR EL ULTIMO COMMIT porque no se ha probado todavía en el servidor de Cristobal
+
+
 Hay sitios donde se usan directorios a pelo, como ocurre en el método delete_logs() que 
 usamos ...
     for file in /docker/logs/backup_with_docker_pause_*.log; do
 ... cuando podríamos usar una variable global al principio de "docker/sh_creados/backup_with_docker_pause.sh"
+
+backup_with_docker_pause_ está siendo usado por ejemplo en el módulo docker/sh_creados/fn_get_data_logfile.sh cambiarlo por LOG_FILE_BASENAME
+
+La variable LOGFILE tenemos que crearla en el .env
+
+
 
 ACTUALIZAR cambios en gitHub ... SIEMPRE
 
