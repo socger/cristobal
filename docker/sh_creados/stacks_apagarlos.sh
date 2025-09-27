@@ -8,11 +8,11 @@ source fn_scale_stacks.sh
 source fn_scale_services.sh
 
 # Cargamos función para obtener fecha y archivo de log
-source fn_get_data_logfile.sh
+source fn_get_date_and_logfile.sh
 
 # Preparamos algunas variables y creamos directorios necesarios
-# Obtenemos fecha actual del sistema y nombre del fichero ue guardará los log
-read FECHA LOGFILE <<< "$(get_date_and_logfile)"
+# Obtenemos fecha actual del sistema y nombre del fichero que guardará los log
+read FECHA LOGFILE <<< "$(get_date_and_logfile "$LOGS_DIR" "$LOG_FILE_BASENAME")"
 
 # Obtener todos los stacks existentes. Levantados o no levantados.
 STACKS=$(docker stack ls --format '{{.Name}}')

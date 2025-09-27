@@ -1,16 +1,12 @@
 #!/bin/bash
+# filepath: /home/socger/trabajo/socger/cristobal/docker/sh_creados/backup_with_docker_pause.sh
 
-# Cargar configuración
-[ -f ".env" ] && source .env
+cd /docker/sh_creados
 
-# Valores por defecto si no se cargó .env
-LOGS_DIR="${LOGS_DIR:-/docker/logs}"
-SCRIPTS_DIR="${SCRIPTS_DIR:-/docker/sh_creados}"
-SOURCE_DIR="${SOURCE_DIR:-/docker}"
-LOG_FILE_BASENAME="${LOG_FILE_BASENAME:-backup_with_docker_pause_}"
+# Cargar configuración del sistema
+source fn_load_config.sh
 
-# Nos situamos en el directorio de los scripts
-cd "$SCRIPTS_DIR"
+load_backup_config
 
 # Cargamos función para imprimir mensajes en logs y terminal
 source fn_msg.sh
@@ -20,7 +16,7 @@ source fn_scale_stacks.sh
 source fn_scale_services.sh
 
 # Cargamos función para obtener fecha y archivo de log
-source fn_get_data_logfile.sh
+source fn_get_date_and_logfile.sh
 
 # Load function to unmount the USB backup device
 source fn_desmontar_hd.sh
@@ -43,18 +39,11 @@ source fn_controlar_timeout.sh
 # Cargamos función para borrar logs antiguos
 source fn_delete_logs.sh
 
-# Eliminamos todos los contenedores detenidos, (es decir, los que tienen estado exited, dead o que no están en ejecución).
+# Eliminamos todos los contenedores detenidos
 docker container prune -f
 
-# Preparamos algunas variables y creamos directorios necesarios
-# Obtenemos fecha actual del sistema y nombre del fichero que guardará los log
-read FECHA LOGFILE <<< "$(get_date_and_logfile)"
-
-# Ruta del disco USB
-DISK_USB="/dev/sdb1"
-
-# Ruta donde se monta el disco USB
-MOUNT_DISK_USB="/mnt/mount_disk_usb"
+# Preparamos variables dinámicas (que dependen de la fecha/hora actual)
+read FECHA LOGFILE <<< "$(get_date_and_logfile "$LOGS_DIR" "$LOG_FILE_BASENAME")"
 
 # Ruta donde se guardará la copia de seguridad
 DEST_DIR="$MOUNT_DISK_USB/backup"
@@ -62,11 +51,15 @@ DEST_DIR="$MOUNT_DISK_USB/backup"
 # Nombre del archivo de respaldo (con fecha y hora)
 BACKUP_FILE="$DEST_DIR/backup_$(date +%Y%m%d_%H%M%S).tar.gz"
 
-# Variables para mysql
-MYSQL_USER="root"
-MYSQL_PASSWORD="sasa"
+# Variables para mysql dump
 DUMP_DIR="$SOURCE_DIR/mysql_dump_temp"
 MYSQL_DUMP_FILE="$DUMP_DIR/mysql_dump_$(date +%Y%m%d_%H%M%S).sql"
+
+
+
+
+
+
 
 msg "---------------------------------------------" "$LOGFILE"
 msg "- INICIO DE LA COPIA                        -" "$LOGFILE"
