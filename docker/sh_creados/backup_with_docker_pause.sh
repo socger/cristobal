@@ -1,11 +1,11 @@
 #!/bin/bash
-# filepath: /home/socger/trabajo/socger/cristobal/docker/sh_creados/backup_with_docker_pause.sh
 
-cd /docker/sh_creados
+# Obtener el directorio donde está ubicado este script
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$SCRIPT_DIR"
 
 # Cargar configuración del sistema
 source fn_load_config.sh
-
 load_backup_config
 
 # Cargamos función para imprimir mensajes en logs y terminal
@@ -54,12 +54,6 @@ BACKUP_FILE="$DEST_DIR/backup_$(date +%Y%m%d_%H%M%S).tar.gz"
 # Variables para mysql dump
 DUMP_DIR="$SOURCE_DIR/mysql_dump_temp"
 MYSQL_DUMP_FILE="$DUMP_DIR/mysql_dump_$(date +%Y%m%d_%H%M%S).sql"
-
-
-
-
-
-
 
 msg "---------------------------------------------" "$LOGFILE"
 msg "- INICIO DE LA COPIA                        -" "$LOGFILE"
