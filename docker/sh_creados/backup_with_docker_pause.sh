@@ -127,7 +127,8 @@ if [ -n "$STACKS" ]; then
     desmontar_hd "$MOUNT_DISK_USB" "$DISK_USB" "$LOGFILE"
 
     # Borramos log's antiguos, de más de dos días 
-    delete_logs 2 "$LOG_FILE_BASENAME" "$LOGFILE"
+    # delete_logs 2 "$LOG_FILE_BASENAME" "$LOGFILE"
+    delete_logs "$LOG_RETENTION_DAYS" "$LOG_FILE_BASENAME" "$LOGFILE"
 else
     msg ". " "$LOGFILE"
     msg "[$(date)] No hay stacks creados. Por lo que no puedo hacer copia de ellos." "$LOGFILE"
