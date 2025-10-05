@@ -3,15 +3,11 @@ Ya se están haciendo copias en el hd usb y en la nube
 Comprobar de vez en cuando si se borran las más old, tanto en el hd, como en la nube.
 Descargar de la nube uno de los zip y comprobar si está todo ok
 
+Ver porqué no borra en la nube, con rclone, los ficheros más old
+
 ACTUALIZAR cambios en gitHub ... SIEMPRE
 
 -------------------------------
 YA HECHO ... FALTA COMPROBARLO
 -------------------------------
-REVISAR los dos ULTIMOs COMMIT porque no se ha probado todavía en el servidor de Cristobal
-    EL METODO delete_logs() AHORA recibe el primer parámetro de una de las variables que hay en .env .... ver si funciona bien el método
-
-Las copias todas empiezan con el nombre de fichero "backup_" ... ver si se puede poner este nombre en .env .... antes debo de ver en donde aparece "backup_"
-
-fn_delete_logs.sh BORRARLO en servidor de Cristobal, pues ahora se llama fn_delete.sh
 
