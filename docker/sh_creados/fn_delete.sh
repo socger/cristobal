@@ -4,7 +4,7 @@ delete_files() {
     local param_files_to_delete=$2
     local param_cantidad_dias=$3
     local param_log_file=$4
-    
+
     local fecha_limite=$(date -d "-$param_cantidad_dias days" +%Y%m%d)
 
     for file in "$param_path"/$param_files_to_delete; do
@@ -12,7 +12,7 @@ delete_files() {
         if [ ! -f "$file" ]; then
             continue
         fi
-        
+
         local filename=$(basename "$file")
         local fecha_archivo=$(echo "$filename" | grep -oP '\d{8}')
 
