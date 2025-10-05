@@ -6,7 +6,7 @@ cd "$SCRIPT_DIR"
 
 # Cargar configuración del sistema
 source fn_load_config.sh
-load_backup_config
+load_config
 
 # Cargamos función para imprimir mensajes en logs y terminal
 source fn_msg.sh
@@ -37,22 +37,22 @@ source fn_verificar_servicios.sh
 source fn_controlar_timeout.sh
 
 # Cargamos función para borrar logs antiguos
-source fn_delete_logs.sh
+source fn_delete.sh
 
 # Eliminamos todos los contenedores detenidos
 docker container prune -f
 
 # Preparamos variables dinámicas (que dependen de la fecha/hora actual)
-read FECHA LOGFILE <<< "$(get_date_and_logfile "$LOGS_DIR" "$LOG_FILE_BASENAME")"
+read FECHA LOGFILE <<< "$(get_date_and_logfile "$LOGS_PATH" "$LOG_FILE_BASENAME")"
 
 # Ruta donde se guardará la copia de seguridad
 DEST_DIR="$MOUNT_DISK_USB/backup"
 
 # Nombre del archivo de respaldo (con fecha y hora)
-BACKUP_FILE="$DEST_DIR/backup_$(date +%Y%m%d_%H%M%S).tar.gz"
+BACKUP_FILE="$DEST_DIR/$BACKUP_BASENAME$(date +%Y%m%d_%H%M%S).tar.gz"
 
 # Variables para mysql dump
-DUMP_DIR="$SOURCE_DIR/mysql_dump_temp"
+DUMP_DIR="$SOURCE_PATH/mysql_dump_temp"
 MYSQL_DUMP_FILE="$DUMP_DIR/mysql_dump_$(date +%Y%m%d_%H%M%S).sql"
 
 msg "---------------------------------------------" "$LOGFILE"
@@ -109,16 +109,14 @@ if [ -n "$STACKS" ]; then
     scale_stacks "$STACKS" 0 "$LOGFILE"
 
     # Creamos la copia de seguridad en el disco USB
-    create_zip_backup "$MOUNT_DISK_USB" "$DISK_USB" "$LOGFILE" "$SOURCE_DIR" "$DEST_DIR" "$BACKUP_FILE" "$STACKS"
+    create_zip_backup "$MOUNT_DISK_USB" "$DISK_USB" "$LOGFILE" "$SOURCE_PATH" "$DEST_DIR" "$BACKUP_FILE" "$STACKS"
 
     # Eliminar el dump temporal
     rm -rf "$DUMP_DIR"
     msg "[$(date)] Volcado lógico de MySQL eliminado del sistema (incluido en el .tar.gz)" "$LOGFILE"
 
-    # Eliminar backups de más de 7 días
-    msg "[$(date)] Vamos a eliminar backups de más de 7 días eliminados." "$LOGFILE"
-    find "$DEST_DIR" -name 'backup_*.tar.gz' -type f -mtime +7 -exec rm -f {} \;
-    msg "[$(date)] Backups de más de 7 días eliminados." "$LOGFILE"
+    # Borramos backups antiguos
+    delete_backups "$BACKUP_RETENTION_DAYS" "$BACKUP_BASENAME" "$LOGFILE" "$DEST_DIR"
 
     # Levantamos los stacks, contenedores y sus servicios
     scale_stacks "$STACKS" 1 "$LOGFILE"
@@ -126,9 +124,8 @@ if [ -n "$STACKS" ]; then
     # Desmontamos el dispositivo usb de copias 
     desmontar_hd "$MOUNT_DISK_USB" "$DISK_USB" "$LOGFILE"
 
-    # Borramos log's antiguos, de más de dos días 
-    # delete_logs 2 "$LOG_FILE_BASENAME" "$LOGFILE"
-    delete_logs "$LOG_RETENTION_DAYS" "$LOG_FILE_BASENAME" "$LOGFILE"
+    # Borramos log's antiguos
+    delete_logs "$LOG_RETENTION_DAYS" "$LOG_FILE_BASENAME" "$LOGFILE" "$LOGS_PATH"
 else
     msg ". " "$LOGFILE"
     msg "[$(date)] No hay stacks creados. Por lo que no puedo hacer copia de ellos." "$LOGFILE"

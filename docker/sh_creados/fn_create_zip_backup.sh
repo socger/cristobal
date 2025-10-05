@@ -3,13 +3,13 @@ create_zip_backup() {
     local param_mount_disk_usb=$1
     local param_disk_usb=$2
     local param_logfile=$3
-    local param_source_dir=$4
+    local param_source_path=$4
     local param_dest_dir=$5
     local param_backup_file=$6  # ← USAR ESTE NOMBRE
     local param_stacks=$7
 
     msg ". " "$param_logfile"
-    msg "[$(date)] Haciendo copia de seguridad de $param_source_dir a $param_backup_file ..." "$param_logfile"
+    msg "[$(date)] Haciendo copia de seguridad de $param_source_path a $param_backup_file ..." "$param_logfile"
     msg ". " "$param_logfile"
 
     # Crear la copia de seguridad
@@ -19,10 +19,10 @@ create_zip_backup() {
     # CAMBIO: Usar el nombre pasado como parámetro, no generar uno nuevo
     file_tar="${param_backup_file%.tar.gz}.tar"  # Quitar .tar.gz y añadir .tar
 
-    tar -cvf "$file_tar" -C "$(dirname "$param_source_dir")" \
+    tar -cvf "$file_tar" -C "$(dirname "$param_source_path")" \
         --exclude="docker/logs" \
         --exclude="docker/logs/*" \
-        "$(basename "$param_source_dir")" \
+        "$(basename "$param_source_path")" \
         2>&1 | tee -a "$param_logfile"
 
     # Capturar el código de salida del tar (no del tee)
@@ -34,7 +34,7 @@ create_zip_backup() {
         # Fase 2: Añadir los logs al archivo .tar
         msg "[$(date)] Fase 2: Añadiendo logs al backup..." "$param_logfile"
 
-        tar -rvf "$file_tar" -C "$(dirname "$param_source_dir")" "docker/logs" >/dev/null 2>&1
+        tar -rvf "$file_tar" -C "$(dirname "$param_source_path")" "docker/logs" >/dev/null 2>&1
         tar_logs_exit_code=$?
 
         if [ $tar_logs_exit_code -eq 0 ]; then

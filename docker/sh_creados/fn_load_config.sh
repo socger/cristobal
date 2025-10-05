@@ -1,5 +1,5 @@
 # Función para cargar configuración del sistema de backup
-load_backup_config() {
+load_config() {
     local env_file="${1:-.env}"
 
     # Cargar configuración desde .env si existe
@@ -9,11 +9,12 @@ load_backup_config() {
     fi
 
     # Valores por defecto si no se cargaron desde .env
-    export SOURCE_DIR="${SOURCE_DIR:-/docker}"
-    export LOGS_DIR="${LOGS_DIR:-/docker/logs}"
-    export LOG_FILE_BASENAME="${LOG_FILE_BASENAME:-backup_with_docker_pause_}"
+    export SOURCE_PATH="${SOURCE_PATH:-/docker}"
+    export LOGS_PATH="${LOGS_PATH:-/docker/logs}"
 
-    # Variables adicionales con valores por defecto
+    export LOG_FILE_BASENAME="${LOG_FILE_BASENAME:-backup_with_docker_pause_}"
+    export BACKUP_BASENAME="${BACKUP_BASENAME:-backup_}"
+
     export DISK_USB="${DISK_USB:-/dev/sdb1}"
     export MOUNT_DISK_USB="${MOUNT_DISK_USB:-/mnt/mount_disk_usb}"
 
@@ -33,9 +34,11 @@ load_backup_config() {
     if [ "${DEBUG_CONFIG:-false}" = "true" ]; then
         echo "📋 Configuración cargada:"
 
-        echo "  - SOURCE_DIR: $SOURCE_DIR"
-        echo "  - LOGS_DIR: $LOGS_DIR"
+        echo "  - SOURCE_PATH: $SOURCE_PATH"
+        echo "  - LOGS_PATH: $LOGS_PATH"
+
         echo "  - LOG_FILE_BASENAME: $LOG_FILE_BASENAME"
+        echo "  - BACKUP_BASENAME: $BACKUP_BASENAME"
 
         echo "  - DISK_USB: $DISK_USB"
         echo "  - MOUNT_DISK_USB: $MOUNT_DISK_USB"

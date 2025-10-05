@@ -12,7 +12,7 @@ source fn_get_date_and_logfile.sh
 
 # Preparamos algunas variables y creamos directorios necesarios
 # Obtenemos fecha actual del sistema y nombre del fichero que guardará los log
-read FECHA LOGFILE <<< "$(get_date_and_logfile "$LOGS_DIR" "$LOG_FILE_BASENAME")"
+read FECHA LOGFILE <<< "$(get_date_and_logfile "$LOGS_PATH" "$LOG_FILE_BASENAME")"
 
 # Obtener todos los stacks existentes. Levantados o no levantados.
 STACKS=$(docker stack ls --format '{{.Name}}')
