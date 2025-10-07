@@ -53,16 +53,36 @@ upload_to_gdrive() {
                 msg "[$(date)] 📋 Contenido actual en Google Drive después de subir:" "$param_logfile"
                 rclone ls "${nube}backups/" >> "$param_logfile" 2>&1
 
-                # Limpiar backups antiguos en Drive (mantener últimos 7 días)
-                msg "[$(date)] 🧹 Limpiando backups antiguos en Google Drive (>7 días)..." "$param_logfile"
+                # Limpiar backups antiguos en Drive
+                msg "[$(date)] 🧹 Limpiando backups antiguos en Google Drive (>7 días) - Eliminación permanente..." "$param_logfile"
+                
+                # Listar archivos que se van a eliminar (para log)
+                msg "[$(date)] 📋 Archivos que se eliminarán:" "$param_logfile"
+                rclone ls "${nube}backups/" --min-age ${BACKUP_RETENTION_DAYS:-7}d >> "$param_logfile" 2>&1
+                
+                if [ "${GDRIVE_PERMANENT_DELETE:-true}" = "true" ]; then
+                    msg "[$(date)] ⚠️ Eliminación PERMANENTE activada (sin papelera)" "$param_logfile"
+                    if rclone delete "${nube}backups/" --min-age ${BACKUP_RETENTION_DAYS:-7}d --drive-use-trash=false --log-file="$param_logfile.rclone" --log-level INFO; then
+                        msg "[$(date)] ✅ Archivos antiguos eliminados permanentemente" "$param_logfile"
+                    else
+                        msg "[$(date)] ⚠️ Error al eliminar archivos antiguos" "$param_logfile"
+                    fi
+                else
+                    msg "[$(date)] ℹ️ Eliminación con papelera (requerirá limpieza manual)" "$param_logfile"
+                    if rclone delete "${nube}backups/" --min-age ${BACKUP_RETENTION_DAYS:-7}d --log-file="$param_logfile.rclone" --log-level INFO; then
+                        msg "[$(date)] ✅ Archivos antiguos enviados a la papelera" "$param_logfile"
+                    else
+                        msg "[$(date)] ⚠️ Error al enviar archivos a la papelera" "$param_logfile"
+                    fi
+                fi
 
-                # rclone delete "${nube}backups/" --min-age 7d --log-file="$param_logfile.rclone" --log-level INFO
-                # ¿Qué hace --drive-use-trash=false? ... Elimina permanentemente los archivos, no los envía a la papelera ... Libera espacio inmediatamente
-                rclone delete "${nube}backups/" --min-age 7d --drive-use-trash=false --log-file="$param_logfile.rclone" --log-level INFO
+                # Opcional: Limpiar papelera por si había archivos anteriores
+                msg "[$(date)] 🗑️ Limpiando papelera de Google Drive..." "$param_logfile"
+                rclone cleanup "${nube}" --log-file="$param_logfile.rclone" --log-level INFO 2>/dev/null
 
-                # Vaciar completamente la papelera de Google Drive
-                msg "[$(date)] 🗑️ Vaciando papelera de Google Drive..." "$param_logfile"
-                rclone cleanup "${nube}" --log-file="$param_logfile.rclone" --log-level INFO
+                # Mostrar espacio liberado
+                msg "[$(date)] 📊 Contenido final en Google Drive:" "$param_logfile"
+                rclone ls "${nube}backups/" >> "$param_logfile" 2>&1
 
                 return 0
             else
