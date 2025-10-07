@@ -55,7 +55,14 @@ upload_to_gdrive() {
 
                 # Limpiar backups antiguos en Drive (mantener últimos 7 días)
                 msg "[$(date)] 🧹 Limpiando backups antiguos en Google Drive (>7 días)..." "$param_logfile"
-                rclone delete "${nube}backups/" --min-age 7d --log-file="$param_logfile.rclone" --log-level INFO
+
+                # rclone delete "${nube}backups/" --min-age 7d --log-file="$param_logfile.rclone" --log-level INFO
+                # ¿Qué hace --drive-use-trash=false? ... Elimina permanentemente los archivos, no los envía a la papelera ... Libera espacio inmediatamente
+                rclone delete "${nube}backups/" --min-age 7d --drive-use-trash=false --log-file="$param_logfile.rclone" --log-level INFO
+
+                # Vaciar completamente la papelera de Google Drive
+                msg "[$(date)] 🗑️ Vaciando papelera de Google Drive..." "$param_logfile"
+                rclone cleanup "${nube}" --log-file="$param_logfile.rclone" --log-level INFO
 
                 return 0
             else
