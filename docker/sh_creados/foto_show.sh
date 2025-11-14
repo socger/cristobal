@@ -5,6 +5,9 @@
 # diapositivas con feh.
 # ===================================================
 
+# Sin esta línea, al presionar Ctrl+C, el script de Bash podría terminar, pero el proceso feh podría seguir ejecutándose en segundo plano, dejando la pantalla "atascada" en la presentación.
+trap "echo 'Saliendo del slideshow...'; pkill feh; exit 0" SIGINT SIGTERM
+
 # Carpeta local donde se guardan las imágenes
 LOCAL_DIR="/docker/images"
 
