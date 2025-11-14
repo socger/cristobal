@@ -8438,3 +8438,720 @@ Usa el **Método 3 con función y logging** porque:
 5. ✅ Consistente con el resto de tu sistema de backup
 
 ¿Quieres que implemente alguna funcionalidad adicional en el script de foto_show.sh?
+
+JeronimoSanchezGalvintec: socger@DESKTOP-FP3P9MB:~/trabajo/socger/cristobal$ cat ~/.ssh/ubuntu_github.pub
+ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAINmRn5bF9nJ6bGvVj3+UTZ4Lj5lD4HeTjfg1KiIHj6x7 socger@gmail.com
+socger@DESKTOP-FP3P9MB:~/trabajo/socger/cristobal$ nano ~/.ssh/config
+socger@DESKTOP-FP3P9MB:~/trabajo/socger/cristobal$ ssh -T git@github.com
+Hi socger! You've successfully authenticated, but GitHub does not provide shell access.
+socger@DESKTOP-FP3P9MB:~/trabajo/socger/cristobal$ git remote set-url origin git@github.com:socger/cristobal.git
+socger@DESKTOP-FP3P9MB:~/trabajo/socger/cristobal$ git remote -v
+origin  git@github.com:socger/cristobal.git (fetch)
+origin  git@github.com:socger/cristobal.git (push)
+socger@DESKTOP-FP3P9MB:~/trabajo/socger/cristobal$ git push origin main
+ssh: connect to host github.com port 22: Connection timed out
+fatal: Could not read from remote repository.
+
+Please make sure you have the correct access rights
+and the repository exists.
+
+GitHub Copilot: Optimizing tool selection...Summarized conversation historyVoy a crear un plan de pasos a seguir para diagnosticar y resolver el fallo al hacer `git push` (timeout en puerto 22). Luego te doy los comandos y opciones (SSH por puerto 443, uso de HTTPS/PAT, pruebas de conectividad).
+
+Created 5 todos
+
+Summarized conversation historyHe creado un plan de pasos. Siguiente: te explico por qué ocurre el timeout y te doy los comandos concretos para probar y arreglarlo; dime cuál quieres que intente primero (SSH sobre 443 o HTTPS/PAT).  
+
+Resumen rápido del problema y recomendaciones:
+- Causa probable: tu red bloquea salidas SSH por el puerto 22 (o Git usa un túnel bloqueado); por eso `git push` a git@github.com:... falla con timeout en el puerto 22.  
+- Pruebas que debes ejecutar ahora (en tu máquina) y las acciones según resultados.
+
+Comandos de diagnóstico (cópialos y ejecútalos):
+
+1) Pruebas de conectividad:
+```bash
+# DNS + HTTP
+nslookup github.com
+curl -I https://github.com -m 10
+
+# Probar puerto 22 (SSH)
+nc -vz github.com 22
+# o si no tienes nc:
+telnet github.com 22
+
+# Probar puerto 443 en el host ssh.github.com (SSH sobre TLS)
+nc -vz ssh.github.com 443
+```
+
+Interpreta:
+- Si `nc -vz github.com 22` devuelve timeout/filtered -> puerto 22 bloqueado.
+- Si `nc -vz ssh.github.com 443` funciona, SSH sobre 443 puede funcionar.
+
+2) Si puerto 22 bloqueado pero ssh.github.com:443 accesible — configurar SSH para usar puerto 443:
+Edita `~/.ssh/config` (añade o modifica la sección `Host github.com`):
+```text
+Host github.com
+  Hostname ssh.github.com
+  Port 443
+  User git
+  IdentityFile ~/.ssh/ubuntu_github
+  IdentitiesOnly yes
+```
+Luego prueba:
+```bash
+ssh -T git@github.com
+# si responde OK, intenta:
+git push origin main
+```
+
+3) Alternativa: usar la URL SSH explícita con puerto 443 (si no quieres cambiar config):
+```bash
+git remote set-url origin ssh://git@ssh.github.com:443/socger/cristobal.git
+git push origin main
+```
+
+4) Si ni 22 ni 443 SSH funcionan (restricción más severa) — usar HTTPS + token:
+- Usar GitHub CLI (recomendado) — autentica y usa HTTPS:
+```bash
+# instalar gh si no lo tienes (ejemplo en Debian/Ubuntu)
+# sudo apt install gh
+
+gh auth login
+# elegir GitHub.com -> HTTPS -> login in browser (o paste token)
+# luego:
+git remote set-url origin https://github.com/socger/cristobal.git
+git push origin main
+```
+- O usar PAT manualmente:
+  - Genera Personal Access Token (repo scope) en GitHub.
+  - Cambia remote y empuja:
+```bash
+git remote set-url origin https://github.com/socger/cristobal.git
+# Al push, Git pedirá credenciales; usa tu usuario GitHub y como contraseña pega el PAT.
+git push origin main
+```
+
+5) Si usas proxy corporativo:
+- Comprueba variables de entorno:
+```bash
+env | egrep -i 'proxy|http_proxy|https_proxy'
+git config --global --get http.proxy
+git config --global --get https.proxy
+```
+- Ajusta `git` para usar proxy o quítalo si no corresponde.
+
+---
+
+Dime cuál camino quieres que siga y si quieres que:
+- Te genere y aplique la configuración SSH sobre 443 en `~/.ssh/config` desde aquí (te mostraré el patch),
+- O que te guíe paso a paso para probar y, según el resultado, haga el cambio apropiado.
+
+JeronimoSanchezGalvintec: Tengo que subir unos cambios al proyecto en GitHub y si intento hacer un Fetch me da el siguiente error ... 2025-11-14 19:29:58.380 [info] > git fetch --all [130385ms]
+2025-11-14 19:29:58.380 [info] ssh: connect to host github.com port 22: Connection timed out
+fatal: Could not read from remote repository.
+
+Please make sure you have the correct access rights
+and the repository exists.
+error: Could not fetch origin
+
+GitHub Copilot: Optimizing tool selection...Summarized conversation historyVoy a crear/actualizar un plan (todo list) para diagnosticar y arreglar el fallo de `git fetch` por bloqueo del puerto 22. Luego te doy los comandos y el siguiente paso.
+
+Starting: *Diagnosticar conectividad GitHub* (1/5)
+
+Progreso: he escrito el plan y marqué el diagnóstico como en progreso. Siguiente paso: ejecuta las pruebas de conectividad abajo y copia los resultados aquí; según eso te doy el ajuste exacto para tu `~/.ssh/config` o el cambio a HTTPS.
+
+Pasos y comandos (ejecútalos en tu terminal `bash`):
+
+1) Diagnóstico rápido — comprueba puertos 22 y 443, DNS y HTTPS:
+```bash
+# Prueba conexión TCP simple (usa netcat)
+nc -vz github.com 22
+nc -vz ssh.github.com 443
+
+# Alternativa si no tienes nc:
+# telnet (saldrá error si no conecta)
+telnet github.com 22 || true
+telnet ssh.github.com 443 || true
+
+# Comprobar que HTTPS responde
+curl -I https://github.com -m 10
+```
+- Resultado esperado si 22 está bloqueado: `Connection timed out` o similar en la primera línea.
+- Si `ssh.github.com:443` responde, verás "succeeded" / "open" con `nc` o una conexión establecida.
+
+2) Si `ssh.github.com:443` está accesible — configurar SSH para usar puerto 443:
+- Haz backup de tu config y añade el bloque:
+```bash
+# Backup del config actual
+mkdir -p ~/.ssh && cp -v ~/.ssh/config ~/.ssh/config.bak || true
+
+# Añadir (usa >> para anexar)
+cat >> ~/.ssh/config <<'EOF'
+Host github.com
+  Hostname ssh.github.com
+  Port 443
+  User git
+  IdentityFile ~/.ssh/ubuntu_github
+  IdentitiesOnly yes
+EOF
+
+# Asegura permisos correctos
+chmod 600 ~/.ssh/config
+```
+- Prueba autenticación y git:
+```bash
+ssh -T git@github.com
+git fetch origin --all
+git push origin main
+```
+- Si funciona, deja la configuración. Si no, restaura el backup:
+```bash
+mv ~/.ssh/config.bak ~/.ssh/config
+```
+
+3) Si `ssh.github.com:443` también está bloqueado — cambiar temporalmente el remote a HTTPS (usa PAT or `gh`):
+```bash
+# Cambiar remote a HTTPS
+git remote set-url origin https://github.com/socger/cristobal.git
+
+# Usar gh CLI (recomendado) para autenticar interactiva:
+gh auth login
+
+# O configurar un PAT y usarlo cuando git pida credenciales:
+# (Crear PAT en https://github.com/settings/tokens con scope "repo")
+git fetch origin --all
+git push origin main
+```
+- Nota: con HTTPS, `gh auth login` es más cómodo y seguro que meter el token en la URL.
+
+4) Opcional: actualizar remote para usar explicit ssh host+port (forma alternativa):
+```bash
+# URL ssh con host y puerto (si quieres)
+git remote set-url origin ssh://git@ssh.github.com:443/socger/cristobal.git
+git fetch origin --all
+```
+
+Qué debes copiar aquí
+- Salida exacta de los comandos `nc -vz github.com 22` y `nc -vz ssh.github.com 443` (o `telnet`/`curl`).
+- Salida de `ssh -T git@github.com` si probaste ya.
+Con eso aplicaré el paso siguiente (te doy el bloque `~/.ssh/config` preciso o el comando para cambiar a HTTPS y los pasos para autenticación).
+
+¿Quieres que te genere y aplique automáticamente el bloque de `~/.ssh/config` en el repositorio (como archivo `scripts/setup_ssh_over_443.sh`) para que lo ejecutes aquí, o prefieres hacerlo manualmente copiando los comandos?
+
+JeronimoSanchezGalvintec: socger@DESKTOP-FP3P9MB:~/trabajo/socger/cristobal$ nc -vz github.com 22
+Connection to github.com (140.82.121.4) 22 port [tcp/ssh] succeeded!
+socger@DESKTOP-FP3P9MB:~/trabajo/socger/cristobal$ nc -vz ssh.github.com 443
+Connection to ssh.github.com (140.82.121.36) 443 port [tcp/https] succeeded!
+socger@DESKTOP-FP3P9MB:~/trabajo/socger/cristobal$ curl -I https://github.com -m 10
+HTTP/2 200 
+date: Fri, 14 Nov 2025 18:47:20 GMT
+content-type: text/html; charset=utf-8
+vary: X-PJAX, X-PJAX-Container, Turbo-Visit, Turbo-Frame, X-Requested-With, Accept-Language,Accept-Encoding, Accept, X-Requested-With
+content-language: en-US
+etag: W/"d879273b66cea509c52b6b58fa2f3152"
+cache-control: max-age=0, private, must-revalidate
+strict-transport-security: max-age=31536000; includeSubdomains; preload
+x-frame-options: deny
+x-content-type-options: nosniff
+x-xss-protection: 0
+referrer-policy: origin-when-cross-origin, strict-origin-when-cross-origin
+content-security-policy: default-src 'none'; base-uri 'self'; child-src github.githubassets.com github.com/assets-cdn/worker/ github.com/assets/ gist.github.com/assets-cdn/worker/; connect-src 'self' uploads.github.com www.githubstatus.com collector.github.com raw.githubusercontent.com api.github.com github-cloud.s3.amazonaws.com github-production-repository-file-5c1aeb.s3.amazonaws.com github-production-upload-manifest-file-7fdce7.s3.amazonaws.com github-production-user-asset-6210df.s3.amazonaws.com *.rel.tunnels.api.visualstudio.com wss://*.rel.tunnels.api.visualstudio.com github.githubassets.com objects-origin.githubusercontent.com copilot-proxy.githubusercontent.com proxy.individual.githubcopilot.com proxy.business.githubcopilot.com proxy.enterprise.githubcopilot.com *.actions.githubusercontent.com wss://*.actions.githubusercontent.com productionresultssa0.blob.core.windows.net/ productionresultssa1.blob.core.windows.net/ productionresultssa2.blob.core.windows.net/ productionresultssa3.blob.core.windows.net/ productionresultssa4.blob.core.windows.net/ productionresultssa5.blob.core.windows.net/ productionresultssa6.blob.core.windows.net/ productionresultssa7.blob.core.windows.net/ productionresultssa8.blob.core.windows.net/ productionresultssa9.blob.core.windows.net/ productionresultssa10.blob.core.windows.net/ productionresultssa11.blob.core.windows.net/ productionresultssa12.blob.core.windows.net/ productionresultssa13.blob.core.windows.net/ productionresultssa14.blob.core.windows.net/ productionresultssa15.blob.core.windows.net/ productionresultssa16.blob.core.windows.net/ productionresultssa17.blob.core.windows.net/ productionresultssa18.blob.core.windows.net/ productionresultssa19.blob.core.windows.net/ github-production-repository-image-32fea6.s3.amazonaws.com github-production-release-asset-2e65be.s3.amazonaws.com insights.github.com wss://alive.github.com wss://alive-staging.github.com api.githubcopilot.com api.individual.githubcopilot.com api.business.githubcopilot.com api.enterprise.githubcopilot.com edge.fullstory.com rs.fullstory.com; font-src github.githubassets.com; form-action 'self' github.com gist.github.com copilot-workspace.githubnext.com objects-origin.githubusercontent.com; frame-ancestors 'none'; frame-src viewscreen.githubusercontent.com notebooks.githubusercontent.com www.youtube-nocookie.com; img-src 'self' data: blob: github.githubassets.com media.githubusercontent.com camo.githubusercontent.com identicons.github.com avatars.githubusercontent.com private-avatars.githubusercontent.com github-cloud.s3.amazonaws.com objects.githubusercontent.com release-assets.githubusercontent.com secured-user-images.githubusercontent.com/ user-images.githubusercontent.com/ private-user-images.githubusercontent.com opengraph.githubassets.com marketplace-screenshots.githubusercontent.com/ copilotprodattachments.blob.core.windows.net/github-production-copilot-attachments/ github-production-user-asset-6210df.s3.amazonaws.com customer-stories-feed.github.com spotlights-feed.github.com objects-origin.githubusercontent.com *.githubusercontent.com images.ctfassets.net/8aevphvgewt8/; manifest-src 'self'; media-src github.com user-images.githubusercontent.com/ secured-user-images.githubusercontent.com/ private-user-images.githubusercontent.com github-production-user-asset-6210df.s3.amazonaws.com gist.github.com github.githubassets.com assets.ctfassets.net/8aevphvgewt8/ videos.ctfassets.net/8aevphvgewt8/; script-src github.githubassets.com; style-src 'unsafe-inline' github.githubassets.com; upgrade-insecure-requests; worker-src github.githubassets.com github.com/assets-cdn/worker/ github.com/assets/ gist.github.com/assets-cdn/worker/
+server: github.com
+accept-ranges: bytes
+set-cookie: _gh_sess=3C8%2F0H91SOhjc0%2BVMZ5SGwHo9fHko%2BO9nVEaw42vXLUkxdDlOWJFs1w3k6dnu6UC7t%2BjY2bIxwkwBFxQFPiAiH3kzK0dQgYMVV2HXmTdeShMfO%2FHQCauFdxQVSQ7jFeb12c2cUUZyXiiM76c1NGARucxs%2B%2BdfFbm03Vhf5nR8R5qj6XIaK3TbFKCeYexBqvzndJBtbHOGJyNx8cTrADsD9QziJne55dzHVNXzzKBHnisIrPU%2FR8uMpkVsc6S%2BoOlkD1jKbazpRLoHg1toK%2BokA%3D%3D--5FyiT0VUa%2F0jkCtu--DlyfJyFZOSYnz%2FvvQ4Jzgw%3D%3D; Path=/; HttpOnly; Secure; SameSite=Lax
+set-cookie: _octo=GH1.1.122083305.1763146041; Path=/; Domain=github.com; Expires=Sat, 14 Nov 2026 18:47:21 GMT; Secure; SameSite=Lax
+set-cookie: logged_in=no; Path=/; Domain=github.com; Expires=Sat, 14 Nov 2026 18:47:21 GMT; HttpOnly; Secure; SameSite=Lax
+x-github-request-id: CBEA:72152:68C5AAB:5BD2E1C:69177939
+
+GitHub Copilot: ## ✅ **¡Excelente! La conectividad está perfecta**
+
+Los resultados muestran que **todos los puertos están funcionando correctamente**:
+
+```bash
+✅ Puerto 22 (SSH): Conectado a github.com
+✅ Puerto 443 (HTTPS): Conectado a ssh.github.com  
+✅ HTTPS funciona: curl exitoso
+```
+
+## 🎯 **El problema NO es de red, es de configuración SSH**
+
+Ya que los puertos están accesibles, el problema está en la **configuración SSH de Git**. Vamos a solucionarlo:
+
+## 🔧 **Solución: Configurar SSH correctamente**
+
+### **Paso 1: Verificar si ya tienes claves SSH**
+
+```bash
+# Ver si existe la clave que creaste
+ls -la ~/.ssh/ubuntu_github*
+
+# Si existe, ver la clave pública
+cat ~/.ssh/ubuntu_github.pub
+```
+
+### **Paso 2: Configurar archivo SSH config**
+
+```bash
+# Crear/editar configuración SSH
+nano ~/.ssh/config
+
+# Añadir (o verificar) esta configuración:
+Host github.com
+    HostName github.com
+    User git
+    IdentityFile ~/.ssh/ubuntu_github
+    IdentitiesOnly yes
+    AddKeysToAgent yes
+
+# Guardar: Ctrl+O, Enter, Ctrl+X
+```
+
+### **Paso 3: Establecer permisos correctos**
+
+```bash
+# Permisos para archivos SSH
+chmod 700 ~/.ssh
+chmod 600 ~/.ssh/config
+chmod 600 ~/.ssh/ubuntu_github
+chmod 644 ~/.ssh/ubuntu_github.pub
+
+# Verificar permisos
+ls -la ~/.ssh/
+```
+
+### **Paso 4: Probar conexión SSH**
+
+```bash
+# Probar autenticación SSH
+ssh -T git@github.com
+
+# Deberías ver:
+# Hi socger! You've successfully authenticated, but GitHub does not provide shell access.
+```
+
+### **Paso 5: Verificar/Cambiar remote a SSH**
+
+```bash
+# Ver configuración actual
+git remote -v
+
+# Si muestra HTTPS, cambiar a SSH
+git remote set-url origin git@github.com:socger/cristobal.git
+
+# Verificar cambio
+git remote -v
+# Debe mostrar: git@github.com:socger/cristobal.git
+```
+
+### **Paso 6: Intentar push**
+
+```bash
+# Hacer push
+git push origin main
+
+# Si pide passphrase, es la que pusiste al crear la clave
+# Si no pusiste passphrase, debería funcionar directamente
+```
+
+## 🚨 **Si el Paso 4 falla (ssh -T git@github.com)**
+
+### **Opción A: Debug detallado**
+
+```bash
+# Ejecutar con modo verbose para ver qué pasa
+ssh -vT git@github.com 2>&1 | tee ssh_debug.log
+
+# Ver el log
+cat ssh_debug.log | grep -i "error\|fail\|denied"
+```
+
+### **Opción B: Agregar clave al agente SSH**
+
+```bash
+# Iniciar agente SSH
+eval "$(ssh-agent -s)"
+
+# Agregar tu clave
+ssh-add ~/.ssh/ubuntu_github
+
+# Listar claves agregadas
+ssh-add -l
+
+# Probar conexión nuevamente
+ssh -T git@github.com
+```
+
+### **Opción C: Verificar que la clave esté en GitHub**
+
+1. **Copiar clave pública**:
+```bash
+cat ~/.ssh/ubuntu_github.pub
+```
+
+2. **Ir a GitHub**: https://github.com/settings/keys
+
+3. **Verificar que esté agregada**:
+   - Debe aparecer "Ubuntu Cristobal Server" o similar
+   - Si no está, hacer click en **"New SSH key"**
+   - Title: "Ubuntu Cristobal Server"
+   - Key: Pegar contenido de ubuntu_github.pub
+   - Click **"Add SSH key"**
+
+## 📋 **Resumen de comandos en orden:**
+
+```bash
+# 1. Verificar archivo config
+cat ~/.ssh/config
+
+# 2. Si no existe o está incorrecto, crearlo
+cat > ~/.ssh/config << 'EOF'
+Host github.com
+    HostName github.com
+    User git
+    IdentityFile ~/.ssh/ubuntu_github
+    IdentitiesOnly yes
+    AddKeysToAgent yes
+EOF
+
+# 3. Permisos correctos
+chmod 700 ~/.ssh
+chmod 600 ~/.ssh/config ~/.ssh/ubuntu_github
+chmod 644 ~/.ssh/ubuntu_github.pub
+
+# 4. Agregar clave al agente
+eval "$(ssh-agent -s)"
+ssh-add ~/.ssh/ubuntu_github
+
+# 5. Probar conexión
+ssh -T git@github.com
+
+# 6. Cambiar remote a SSH
+git remote set-url origin git@github.com:socger/cristobal.git
+
+# 7. Hacer push
+git push origin main
+```
+
+## 🎯 **Diagnóstico adicional si sigue fallando:**
+
+```bash
+# Ver configuración de git
+git config --list | grep -i url
+
+# Ver información de SSH
+ssh -vT git@github.com 2>&1 | grep -A 5 "debug1: Offering"
+
+# Ver claves disponibles
+ls -la ~/.ssh/
+
+# Ver estado del agente SSH
+ssh-add -l
+```
+
+## ✅ **Resultado esperado:**
+
+Después de seguir estos pasos, deberías ver:
+
+```bash
+$ ssh -T git@github.com
+Hi socger! You've successfully authenticated, but GitHub does not provide shell access.
+
+$ git push origin main
+Enumerating objects: X, done.
+Counting objects: 100% (X/X), done.
+...
+To github.com:socger/cristobal.git
+   abc1234..def5678  main -> main
+```
+
+Ejecuta los comandos en orden y dime en qué paso te quedas o qué error ves. 👍
+
+JeronimoSanchezGalvintec: socger@DESKTOP-FP3P9MB:~/trabajo/socger/cristobal$ ls -la ~/.ssh/ubuntu_github*
+-rw------- 1 socger socger 411 Nov 13 13:18 /home/socger/.ssh/ubuntu_github
+-rw-r--r-- 1 socger socger  98 Nov 13 13:18 /home/socger/.ssh/ubuntu_github.pub
+socger@DESKTOP-FP3P9MB:~/trabajo/socger/cristobal$ cat ~/.ssh/ubuntu_github.pub
+ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAINmRn5bF9nJ6bGvVj3+UTZ4Lj5lD4HeTjfg1KiIHj6x7 socger@gmail.com
+socger@DESKTOP-FP3P9MB:~/trabajo/socger/cristobal$ cat ~/.ssh/config
+Host bitbucket.org
+  AddKeysToAgent yes
+  IdentityFile ~/.ssh/bitbucket_work
+
+Host github.com
+    HostName github.com
+    User git
+    IdentityFile ~/.ssh/ubuntu_github
+    IdentitiesOnly yes
+
+GitHub Copilot: ## ✅ **¡Perfecto! La configuración SSH está correcta**
+
+Todo se ve bien configurado. Ahora solo faltan los últimos pasos:
+
+## 🔧 **Pasos finales:**
+
+### **1. Añadir la clave pública a GitHub:**
+
+Ya tienes la clave pública:
+```
+ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAINmRn5bF9nJ6bGvVj3+UTZ4Lj5lD4HeTjfg1KiIHj6x7 socger@gmail.com
+```
+
+**Ir a GitHub y añadirla:**
+1. Abre: https://github.com/settings/keys
+2. Click **"New SSH key"**
+3. **Title**: "Ubuntu Cristobal Server"
+4. **Key type**: "Authentication Key"
+5. **Key**: Pega la línea completa de arriba
+6. Click **"Add SSH key"**
+
+### **2. Probar la conexión SSH:**
+
+```bash
+ssh -T git@github.com
+```
+
+**Deberías ver:**
+```
+Hi socger! You've successfully authenticated, but GitHub does not provide shell access.
+```
+
+### **3. Cambiar remote a SSH:**
+
+```bash
+# Ver remote actual
+git remote -v
+
+# Cambiar a SSH
+git remote set-url origin git@github.com:socger/cristobal.git
+
+# Verificar el cambio
+git remote -v
+```
+
+### **4. Hacer push:**
+
+```bash
+# Ver estado
+git status
+
+# Si hay cambios pendientes, commitear
+git add .
+git commit -m "Actualizar proyecto con backups incrementales y AGENTS.md"
+
+# Push
+git push origin main
+```
+
+## 🎯 **Si el comando `ssh -T git@github.com` falla:**
+
+### **Opción A: Debug de SSH**
+```bash
+# Ejecutar con modo verbose
+ssh -vT git@github.com 2>&1 | grep -i "authenticating\|success\|fail"
+```
+
+### **Opción B: Forzar uso de la clave**
+```bash
+# Probar conexión explícita
+ssh -i ~/.ssh/ubuntu_github -T git@github.com
+```
+
+### **Opción C: Verificar permisos**
+```bash
+# Los permisos que ya tienes están correctos:
+# -rw------- ubuntu_github (600) ✅
+# -rw-r--r-- ubuntu_github.pub (644) ✅
+
+# Pero verificar el .ssh/config
+chmod 600 ~/.ssh/config
+```
+
+## 📋 **Troubleshooting adicional:**
+
+### **Si dice "Permission denied (publickey)":**
+
+```bash
+# 1. Verificar que la clave está en el agente SSH
+eval "$(ssh-agent -s)"
+ssh-add ~/.ssh/ubuntu_github
+
+# 2. Listar claves cargadas
+ssh-add -l
+
+# 3. Probar de nuevo
+ssh -T git@github.com
+```
+
+### **Si dice "Host key verification failed":**
+
+```bash
+# Limpiar conocidos anteriores y reconectar
+ssh-keygen -R github.com
+ssh -T git@github.com
+# (Responder 'yes' cuando pregunte si confiar en github.com)
+```
+
+## 🚀 **Comandos completos en orden:**
+
+```bash
+# 1. Añadir clave a GitHub (manual en navegador)
+# https://github.com/settings/keys
+
+# 2. Probar conexión
+ssh -T git@github.com
+
+# 3. Añadir al agente SSH (si es necesario)
+eval "$(ssh-agent -s)"
+ssh-add ~/.ssh/ubuntu_github
+
+# 4. Cambiar remote
+git remote set-url origin git@github.com:socger/cristobal.git
+
+# 5. Verificar
+git remote -v
+
+# 6. Push
+git push origin main
+```
+
+## ✅ **Tu configuración actual está perfecta:**
+
+- ✅ Clave SSH generada correctamente
+- ✅ Permisos correctos (600 para privada, 644 para pública)
+- ✅ Archivo `~/.ssh/config` configurado correctamente
+- ✅ IdentityFile apuntando a `~/.ssh/ubuntu_github`
+
+**Solo falta añadir la clave pública a GitHub y probar la conexión.** 
+
+¿En qué paso te encuentras? ¿Ya añadiste la clave a GitHub?
+
+JeronimoSanchezGalvintec: ~/.ssh/config no tenía la línea ...  AddKeysToAgent yes ... ¿es necesaria?
+
+GitHub Copilot: ## 📋 **Sobre `AddKeysToAgent yes`**
+
+La línea `AddKeysToAgent yes` **NO es estrictamente necesaria**, pero es **muy recomendable** incluirla.
+
+## 🔍 **¿Qué hace `AddKeysToAgent yes`?**
+
+Cuando te conectas a GitHub por SSH:
+
+### **Sin `AddKeysToAgent yes`:**
+```bash
+# Cada vez que hagas git push/pull/fetch
+ssh -T git@github.com  # Te pide passphrase SI configuraste una
+git push origin main   # Te pide passphrase SI configuraste una
+git pull origin main   # Te pide passphrase SI configuraste una
+```
+
+### **Con `AddKeysToAgent yes`:**
+```bash
+# Primera vez
+ssh -T git@github.com  # Te pide passphrase (si la configuraste)
+# Añade la clave al agente SSH automáticamente
+
+# Siguientes veces (en la misma sesión)
+git push origin main   # ✅ NO pide passphrase (ya está en el agente)
+git pull origin main   # ✅ NO pide passphrase
+git fetch             # ✅ NO pide passphrase
+```
+
+## 🎯 **Escenarios:**
+
+### **Escenario 1: NO pusiste passphrase al crear la clave**
+```bash
+ssh-keygen -t ed25519 -f ~/.ssh/ubuntu_github -C "socger@gmail.com"
+# Passphrase: [ENTER - sin contraseña]
+```
+- **Sin `AddKeysToAgent`**: ✅ Funciona sin problemas
+- **Con `AddKeysToAgent`**: ✅ Funciona sin problemas (innecesario pero no molesta)
+
+### **Escenario 2: SÍ pusiste passphrase al crear la clave**
+```bash
+ssh-keygen -t ed25519 -f ~/.ssh/ubuntu_github -C "socger@gmail.com"
+# Passphrase: mi_contraseña_secreta
+```
+- **Sin `AddKeysToAgent`**: ❌ Te pedirá la passphrase en CADA operación
+- **Con `AddKeysToAgent`**: ✅ Te pide passphrase solo la PRIMERA vez por sesión
+
+## ✅ **Tu archivo `~/.ssh/config` actual:**
+
+```bash
+Host bitbucket.org
+  AddKeysToAgent yes          # ✅ Tiene AddKeysToAgent
+  IdentityFile ~/.ssh/bitbucket_work
+
+Host github.com
+    HostName github.com
+    User git
+    IdentityFile ~/.ssh/ubuntu_github
+    IdentitiesOnly yes         # ❌ Falta AddKeysToAgent
+```
+
+## 🔧 **Configuración recomendada:**
+
+```bash
+Host bitbucket.org
+  AddKeysToAgent yes
+  IdentityFile ~/.ssh/bitbucket_work
+
+Host github.com
+    HostName github.com
+    User git
+    IdentityFile ~/.ssh/ubuntu_github
+    IdentitiesOnly yes
+    AddKeysToAgent yes    # ← AÑADIR ESTA LÍNEA
+```
+
+## 📝 **Comando para añadirlo:**
+
+```bash
+# Editar archivo de configuración SSH
+nano ~/.ssh/config
+
+# Añadir la línea después de IdentitiesOnly yes
+# Guardar: Ctrl+O, Enter, Ctrl+X
+```
+
+## 📊 **Comparación:**
+
+| Aspecto | Sin AddKeysToAgent | Con AddKeysToAgent |
+|---------|-------------------|-------------------|
+| **Sin passphrase** | ✅ Funciona | ✅ Funciona |
+| **Con passphrase** | ❌ Pide siempre | ✅ Pide solo 1 vez |
+| **Comodidad** | ⚠️ Tedioso si usas passphrase | ✅ Cómodo |
+| **Seguridad** | 🔒 Más seguro (pide siempre) | 🔓 Menos tedioso |
+
+## 🎯 **Recomendación:**
+
+### **Añade `AddKeysToAgent yes` si:**
+- ✅ Usaste passphrase al crear la clave
+- ✅ Quieres evitar escribir la passphrase constantemente
+- ✅ Trabajas en sesiones largas (horas/días)
+
+### **No es necesario si:**
+- ⚠️ No pusiste passphrase (clave sin contraseña)
+- ⚠️ Haces pocas operaciones git al día
+- ⚠️ Prefieres máxima seguridad (pedir passphrase siempre)
+
+## 🚀 **Mi recomendación para tu caso:**
+
+**SÍ, añádela** porque:
+1. ✅ Mantiene consistencia con tu configuración de Bitbucket
+2. ✅ Te ahorra tiempo si usas passphrase
+3. ✅ Es la configuración estándar moderna
+4. ✅ No tiene desventajas si no usas passphrase
+
+## 📝 **Archivo final recomendado:**
+
+```bash
+Host bitbucket.org
+  AddKeysToAgent yes
+  IdentityFile ~/.ssh/bitbucket_work
+
+Host github.com
+    HostName github.com
+    User git
+    IdentityFile ~/.ssh/ubuntu_github
+    IdentitiesOnly yes
+    AddKeysToAgent yes
+```
+
+**En resumen:** No es **obligatoria**, pero es **muy recomendable** para mejorar la experiencia de uso, especialmente si usaste passphrase al crear la clave SSH.
