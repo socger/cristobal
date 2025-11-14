@@ -9399,3 +9399,295 @@ done
 ````
 
 Esta refactorización hace que el código sea más limpio, seguro y coherente con la estructura modular que has definido en tu documentación.
+
+JeronimoSanchezGalvintec: Que hace esta línea que te he realtado en el contexto?
+
+GitHub Copilot: ## 🎯 **Respuesta Directa**
+
+La línea que has resaltado:
+`trap "echo 'Saliendo del slideshow...'; pkill feh; exit 0" SIGINT SIGTERM`
+
+Es un **manejador de interrupciones** que asegura que el script se cierre de forma limpia y ordenada cuando presionas `Ctrl+C` o cuando el sistema intenta terminarlo.
+
+---
+
+## 🔍 **Explicación Detallada**
+
+Vamos a desglosar el comando:
+
+*   **`trap`**: Es un comando de Bash que "atrapa" o intercepta señales del sistema operativo.
+*   **`"..."`**: Es la secuencia de comandos que se ejecutará cuando se atrape una de las señales especificadas.
+*   **`SIGINT SIGTERM`**: Son las señales que se van a atrapar.
+
+### **¿Qué hace la secuencia de comandos?**
+
+1.  **`echo 'Saliendo del slideshow...'`**: Imprime un mensaje amigable en la terminal para que sepas que el script se está cerrando.
+2.  **`pkill feh`**: Este es el paso más importante. `pkill` busca y termina cualquier proceso que se llame `feh`. Esto es crucial porque `feh` se queda ejecutando en primer plano, y si solo interrumpieras el script, el proceso de `feh` podría quedarse "huérfano", manteniendo las imágenes en pantalla completa.
+3.  **`exit 0`**: Termina el script de Bash de forma controlada con un código de salida `0`, que significa "éxito" o "salida sin errores".
+
+### **¿Qué son las señales?**
+
+*   **`SIGINT` (Signal Interrupt)**: Es la señal que se envía a un proceso cuando presionas **`Ctrl+C`** en la terminal.
+*   **`SIGTERM` (Signal Terminate)**: Es una señal de terminación más genérica que el sistema operativo puede enviar para pedirle a un programa que se cierre de forma ordenada (por ejemplo, durante un apagado del sistema).
+
+### **En la práctica, ¿qué sucede?**
+
+1.  Ejecutas el script foto_show.sh.
+2.  La presentación de `feh` se inicia en pantalla completa.
+3.  Presionas `Ctrl+C` para detenerlo.
+4.  En lugar de simplemente "morir", el script activa el `trap`.
+5.  Se ejecuta `echo`, luego `pkill feh` (cerrando la ventana de `feh`), y finalmente `exit 0` (terminando el script).
+
+## ✅ **¿Por qué es importante esta línea?**
+
+Sin esta línea, al presionar `Ctrl+C`, el script de Bash podría terminar, pero el proceso `feh` podría seguir ejecutándose en segundo plano, dejando la pantalla "atascada" en la presentación.
+
+Esta línea es un ejemplo de **buena práctica de programación de scripts** y se alinea perfectamente con la filosofía de tu AGENTS.md sobre el **manejo de errores y la limpieza**, asegurando que el sistema siempre quede en un estado limpio y predecible.
+
+JeronimoSanchezGalvintec: Esta linea que te resalto en el contexto, funcionará en un equipo con Lubuntu?
+
+GitHub Copilot: ✅ **Sí, funcionará perfectamente en Lubuntu.**
+
+La línea `trap "echo 'Saliendo del slideshow...'; pkill feh; exit 0" SIGINT SIGTERM` utiliza componentes estándar que están presentes en prácticamente todas las distribuciones de Linux, incluyendo Lubuntu.
+
+---
+
+### **Análisis de los Componentes**
+
+1.  **`trap`**: Es un comando integrado en el intérprete de comandos **Bash**. Lubuntu, como la mayoría de los sistemas Linux, usa Bash por defecto.
+2.  **`echo`**, **`exit`**: Son también comandos fundamentales de Bash.
+3.  **`pkill`**: Es una utilidad del sistema para "matar" procesos por su nombre. Forma parte del paquete `procps`, que es un componente esencial de cualquier sistema Linux funcional.
+4.  **`feh`**: Este es el único componente que **podría no estar instalado por defecto** en una instalación mínima de Lubuntu.
+
+### **Condición Importante: Las Dependencias**
+
+Para que la línea y el script completo funcionen, necesitas asegurarte de que `feh` y `rclone` estén instalados en tu sistema Lubuntu.
+
+Puedes instalarlos fácilmente con este comando en la terminal:
+
+```bash
+sudo apt update
+sudo apt install feh rclone
+```
+
+### **Alineación con tu AGENTS.md y Mejora de Robustez**
+
+Tu AGENTS.md demuestra un enfoque en la robustez y el manejo de errores. La línea `trap` es un buen ejemplo de ello. Sin embargo, podemos hacerla aún más robusta y legible, siguiendo la filosofía modular de tu proyecto.
+
+#### **Propuesta de Refactorización (Estilo AGENTS.md)**
+
+Podemos mover la lógica de limpieza a una función dedicada. Esto hace que el `trap` sea más limpio y el código más fácil de mantener.
+
+````bash
+#!/bin/bash
+# ===================================================
+# Descripción: Sincroniza imágenes desde una carpeta
+# de Google Drive y muestra una presentación de 
+# diapositivas con feh.
+# Autor: GitHub Copilot
+# Versión: 1.1
+# ===================================================
+
+# --- MÓDULO DE CONFIGURACIÓN ---
+LOCAL_DIR="/docker/images"
+NUBE="GNube"
+NUBE_PATH="images"
+REMOTE="${NUBE}:${NUBE_PATH}"
+SYNC_INTERVAL=3600
+SLIDE_DELAY=10
+
+# --- MÓDULO DE LIMPIEZA Y SALIDA ---
+# Función que se ejecuta al salir del script (Ctrl+C)
+cleanup() {
+    echo -e "\n[INFO] Saliendo del slideshow..."
+    # Verifica si feh está en ejecución antes de intentar matarlo
+    if pgrep -x "feh" > /dev/null; then
+        echo "[INFO] Deteniendo el proceso 'feh'..."
+        pkill feh
+    fi
+    echo "[INFO] Script finalizado."
+    exit 0
+}
+
+# Atrapa las señales de interrupción y terminación y llama a la función cleanup
+trap cleanup SIGINT SIGTERM
+
+# --- MÓDULO DE SINCRONIZACIÓN ---
+sync_images() {
+    echo "[INFO] Sincronizando carpeta remota $REMOTE con $LOCAL_DIR ..."
+    rclone sync "$REMOTE" "$LOCAL_DIR" --update --verbose --drive-chunk-size 64M
+}
+
+# --- FLUJO PRINCIPAL ---
+echo "=== Iniciando Slideshow desde Google Drive ==="
+sync_images
+
+while true; do
+    # Verifica si hay imágenes antes de lanzar feh
+    if [ -n "$(find "$LOCAL_DIR" -maxdepth 1 -type f)" ]; then
+        echo "[INFO] Lanzando presentación de imágenes..."
+        feh -Z -z -F -D $SLIDE_DELAY --hide-pointer --auto-rotate "$LOCAL_DIR"
+    else
+        echo "[WARN] No se encontraron imágenes en $LOCAL_DIR. Esperando para re-sincronizar."
+    fi
+
+    echo "[INFO] Esperando $SYNC_INTERVAL segundos antes de la próxima sincronización..."
+    sleep $SYNC_INTERVAL
+
+    sync_images
+done
+````
+
+**Ventajas de esta refactorización:**
+
+1.  **Modularidad**: La lógica de limpieza está encapsulada en una función `cleanup()`, alineándose con la arquitectura de tu AGENTS.md.
+2.  **Robustez**: El comando `pgrep -x "feh"` comprueba si `feh` está realmente en ejecución antes de intentar detenerlo. Esto evita mensajes de error si presionas `Ctrl+C` mientras el script está en la fase de `sleep` o `rclone`.
+3.  **Legibilidad**: El `trap` es más simple (`trap cleanup SIGINT SIGTERM`) y es inmediatamente obvio lo que hace.
+
+JeronimoSanchezGalvintec: ¿Cómo puedo saber si está ejecutandose feh en lubuntu?
+
+GitHub Copilot: Claro, aquí tienes varias formas de saber si `feh` se está ejecutando en Lubuntu, desde la más simple a la más robusta, alineadas con la filosofía de tu AGENTS.md.
+
+### **Método 1: `pgrep` (Recomendado y usado en tu script)**
+
+Este es el método más limpio y profesional para usar en scripts. De hecho, **tu propio script foto_show.sh ya lo utiliza correctamente**.
+
+```bash
+pgrep -x feh
+```
+
+*   **Cómo funciona**: `pgrep` busca procesos por nombre.
+*   **Si `feh` está en ejecución**: El comando imprimirá el número de ID del proceso (PID).
+*   **Si no está en ejecución**: No imprimirá nada y devolverá un código de salida de error.
+
+**Para usarlo en un script (como en tu foto_show.sh):**
+
+```bash
+if pgrep -x "feh" > /dev/null; then
+    echo "✅ feh está en ejecución."
+else
+    echo "❌ feh no está en ejecución."
+fi
+```
+
+---
+
+### **Método 2: `ps` con `grep` (El método clásico)**
+
+Este es el enfoque más tradicional y funciona en cualquier sistema tipo Unix.
+
+```bash
+ps aux | grep '[f]eh'
+```
+
+*   **Cómo funciona**:
+    1.  `ps aux` lista todos los procesos que se están ejecutando en el sistema.
+    2.  `|` (pipe) envía esa lista al siguiente comando.
+    3.  `grep '[f]eh'` filtra la lista y muestra solo las líneas que contienen "feh".
+*   **¿Por qué `[f]eh`?**: El truco de los corchetes `[f]` evita que el propio comando `grep` aparezca en los resultados.
+
+---
+
+### **Método 3: `pidof` (Simple y directo)**
+
+Similar a `pgrep`, pero a veces más simple.
+
+```bash
+pidof feh
+```
+
+*   **Cómo funciona**: Devuelve directamente el PID del proceso `feh`. Si hay más de uno, los devuelve todos. Si no hay ninguno, no devuelve nada.
+
+---
+
+### **Método 4: `htop` (Visual e Interactivo)**
+
+Si prefieres una vista visual e interactiva, `htop` es la mejor herramienta.
+
+1.  Instálalo si no lo tienes:
+    ```bash
+    sudo apt update
+    sudo apt install htop
+    ```
+2.  Ejecútalo:
+    ```bash
+    htop
+    ```
+3.  Una vez dentro, presiona la tecla `F3` (Buscar) y escribe `feh`. Si el proceso existe, será resaltado.
+
+### **Resumen y Recomendación**
+
+| Comando | Ideal para | Ventajas |
+| :--- | :--- | :--- |
+| **`pgrep -x feh`** | **Scripts y automatización** | Limpio, preciso, diseñado para esto. **Ya lo usas bien.** |
+| `ps aux \| grep '[f]eh'` | Comprobación manual rápida | Universal, muy conocido. |
+| `pidof feh` | Scripts muy simples | Devuelve solo el PID, sin más información. |
+| `htop` | Monitoreo interactivo | Visual, muestra uso de CPU/RAM, fácil de usar. |
+
+Para tus scripts y siguiendo la robustez de tu AGENTS.md, **sigue usando `pgrep`**, ya que es la herramienta correcta para el trabajo. Para una comprobación manual rápida en la terminal, `ps aux | grep '[f]eh'` es excelente.
+
+JeronimoSanchezGalvintec:  sudo apt install libimlib2 libimlib2-modules webp libtiff5
+Leyendo lista de paquetes... Hecho
+Creando árbol de dependencias... Hecho
+Leyendo la información de estado... Hecho
+Nota, seleccionando «libimlib2t64» en lugar de «libimlib2»
+E: No se ha podido localizar el paquete libimlib2-modules
+E: No se ha podido localizar el paquete libtiff5
+
+
+GitHub Copilot: ## 🚨 **Error: Paquetes no encontrados**
+
+El error `E: No se ha podido localizar el paquete` ocurre porque los nombres de los paquetes han cambiado en las versiones más recientes de Lubuntu (y Debian/Ubuntu en general).
+
+Aquí están los nombres correctos y el comando que necesitas.
+
+---
+
+### **Análisis del Error**
+
+1.  **`libimlib2-modules`**: Este paquete ya no existe por separado. Sus funcionalidades ahora están integradas en otros paquetes, principalmente en `libimlib2-dev`.
+2.  **`libtiff5`**: Este es un nombre de paquete versionado. Tu sistema ahora usa una versión más nueva, probablemente `libtiff6`. `apt` es muy estricto con los nombres.
+
+### ✅ **Solución: Usar los Nombres de Paquetes Correctos**
+
+Para instalar las librerías que necesitas, incluyendo las de desarrollo (`-dev`) que son necesarias para compilar programas como `feh` desde el código fuente, el comando correcto es:
+
+```bash
+sudo apt update
+sudo apt install libimlib2-dev libjpeg-dev libpng-dev libgif-dev libtiff-dev libwebp-dev
+```
+
+### **Desglose del Comando Corregido**
+
+*   **`libimlib2-dev`**: Este es el paquete principal. Instala las librerías y los "headers" de desarrollo para `imlib2`. Automáticamente incluye las dependencias que antes estaban en `libimlib2-modules`.
+*   **`libjpeg-dev`, `libpng-dev`, `libgif-dev`**: Librerías de desarrollo para los formatos de imagen más comunes (JPG, PNG, GIF).
+*   **`libtiff-dev`**: Reemplaza a `libtiff5`. Es la librería de desarrollo para el formato TIFF.
+*   **`libwebp-dev`**: La librería de desarrollo para el formato WebP de Google.
+
+### **¿Por qué necesitas los paquetes `-dev`?**
+
+El warning que recibiste de `feh` sobre `--auto-rotate` sugiere que la versión de `imlib2` de tu sistema es demasiado nueva.
+```
+feh WARNING: --auto-rotate would rotate an already correctly oriented image... Rebuild feh with Imlib2 <1.7.5 to enable --auto-rotate.
+```
+Para "reconstruir" (`Rebuild`) `feh` desde su código fuente, necesitas los paquetes de desarrollo (`-dev`), que contienen los archivos necesarios para que el compilador pueda enlazar `feh` con estas librerías de imágenes.
+
+### **Pasos Recomendados (Alineados con AGENTS.md)**
+
+1.  **Actualizar la lista de paquetes:**
+    ```bash
+    sudo apt update
+    ```
+
+2.  **Instalar las dependencias de desarrollo:**
+    ```bash
+    sudo apt install libimlib2-dev libjpeg-dev libpng-dev libgif-dev libtiff-dev libwebp-dev
+    ```
+
+3.  **Verificar la instalación (Opcional):**
+    Puedes verificar que una librería está instalada con `dpkg`.
+    ```bash
+    dpkg -l | grep libimlib2-dev
+    ```
+
+Una vez instaladas estas dependencias, tendrás el entorno necesario para compilar `feh` o cualquier otro programa que dependa de estas librerías de manipulación de imágenes.
