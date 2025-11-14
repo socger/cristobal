@@ -9314,3 +9314,88 @@ git push origin main
     ```
 
 Este método es la solución estándar y más robusta para los problemas de bloqueo del puerto 22.
+
+JeronimoSanchezGalvintec: En el contexto te he pasado las líneas de código que se usan para traer las imágenes desde Google Drive, mediante el comando rclone. En concreto la línea ' "RCLONE_SYNC_CMD="rclone sync \"$REMOTE\" \"$LOCAL_DIR\" --update --verbose --drive-chunk-size 64M" ' si la llamo varias veces me duplicará las imágenes. ¿O que es lo que hace en realidad?
+
+GitHub Copilot: ## 🎯 **Respuesta Corta: No, no te duplicará las imágenes**
+
+El comando `rclone sync` es inteligente y **no duplica archivos**. Su objetivo es hacer que el directorio local (`/docker/images`) sea un **espejo exacto** del directorio en la nube (`GNube:images`).
+
+---
+
+## 🔍 **Explicación Detallada: ¿Qué hace `rclone sync` en realidad?**
+
+El comando `rclone sync "$REMOTE" "$LOCAL_DIR"` le dice a rclone: "Haz que el contenido de `$LOCAL_DIR` sea idéntico al de `$REMOTE`".
+
+Para lograr esto, realiza las siguientes acciones en cada ejecución:
+
+1.  **Compara** cada archivo en la nube (`GNube:images`) con los archivos en tu directorio local (`/docker/images`).
+2.  La comparación se basa en el **nombre, tamaño y fecha de modificación** del archivo.
+3.  Toma decisiones basadas en esa comparación:
+
+| Si un archivo... | `rclone sync` hará esto: |
+| :--- | :--- |
+| **Existe en la nube pero no en local** | Lo **descargará** a tu directorio local. |
+| **Existe en ambos sitios y es idéntico** | Lo **ignorará**. No hace nada, ahorrando tiempo y ancho de banda. |
+| **Existe en ambos sitios pero ha cambiado en la nube** | **Reemplazará** la versión local con la nueva versión de la nube. |
+| **Existe en local pero ya no está en la nube** | Lo **borrará** de tu directorio local para mantener el "espejo". |
+
+### **Análisis de tu comando específico:**
+
+`"rclone sync \"$REMOTE\" \"$LOCAL_DIR\" --update --verbose --drive-chunk-size 64M"`
+
+*   `rclone sync`: Es la operación principal de sincronización.
+*   `--update`: Esta es una optimización clave. Le dice a rclone que no se moleste en transferir archivos si ya existe una versión idéntica (misma fecha y tamaño) en el destino. Esto es lo que **evita la duplicación y las descargas innecesarias**.
+*   `--verbose`: Muestra en la terminal qué archivos se están transfiriendo o comprobando. Es útil para depurar.
+*   `--drive-chunk-size 64M`: Es una optimización para Google Drive. Divide los archivos grandes en trozos de 64MB para mejorar la velocidad y la fiabilidad de la transferencia, especialmente en conexiones inestables.
+
+### **En el contexto de tu script foto_show.sh:**
+
+Tu script ejecuta este comando dentro de un bucle `while true` cada hora (`SYNC_INTERVAL=3600`). Esto es exactamente para lo que `rclone sync` está diseñado.
+
+*   **Primera ejecución:** Descargará todas las imágenes de `GNube:images` a `/docker/images`.
+*   **Ejecuciones siguientes (cada hora):**
+    *   Si no has añadido, modificado o borrado ninguna foto en Google Drive, el comando se ejecutará muy rápido y **no descargará nada**. Simplemente verificará que todo sigue igual.
+    *   Si has subido **5 fotos nuevas** a Google Drive, `rclone sync` solo descargará esas 5 fotos nuevas.
+    *   Si has **borrado 2 fotos** de Google Drive, `rclone sync` las borrará también de tu carpeta local `/docker/images`.
+
+## ⚠️ **Una nota sobre `eval` y las variables**
+
+El uso de `eval $RCLONE_SYNC_CMD` funciona, pero se considera una práctica de riesgo en Bash porque puede ejecutar código inesperado si la variable contiene caracteres especiales.
+
+Siguiendo la arquitectura de tu AGENTS.md, una forma más segura y profesional de estructurar esto sería usar una **función**, que es más legible y segura.
+
+### **Alternativa Recomendada (Estilo AGENTS.md)**
+
+````bash
+// ...existing code...
+SLIDE_DELAY=10
+
+# --- MÓDULO DE SINCRONIZACIÓN ---
+# Función para sincronizar imágenes desde Google Drive
+sync_images_from_drive() {
+    echo "Sincronizando carpeta remota $REMOTE con $LOCAL_DIR ..."
+    rclone sync "$REMOTE" "$LOCAL_DIR" \
+        --update \
+        --verbose \
+        --drive-chunk-size 64M
+}
+
+echo "=== Iniciando Slideshow desde Google Drive ==="
+# Primera sincronización
+sync_images_from_drive
+
+while true; do
+    echo "Lanzando presentación de imágenes..."
+    feh -Z -z -F -D $SLIDE_DELAY --hide-pointer --auto-rotate "$LOCAL_DIR"
+
+    echo "Esperando $SYNC_INTERVAL segundos antes de la próxima sincronización..."
+    sleep $SYNC_INTERVAL
+
+    echo "Actualizando imágenes desde Drive..."
+    # Sincronización en el bucle
+    sync_images_from_drive
+done
+````
+
+Esta refactorización hace que el código sea más limpio, seguro y coherente con la estructura modular que has definido en tu documentación.
