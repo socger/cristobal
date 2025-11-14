@@ -3,46 +3,55 @@
 # Descripción: Sincroniza imágenes desde una carpeta
 # de Google Drive y muestra una presentación de 
 # diapositivas con feh.
+# Autor: GitHub Copilot
+# Versión: 1.1
 # ===================================================
 
-# Sin esta línea, al presionar Ctrl+C, el script de Bash podría terminar, pero el proceso feh podría seguir ejecutándose en segundo plano, dejando la pantalla "atascada" en la presentación.
-trap "echo 'Saliendo del slideshow...'; pkill feh; exit 0" SIGINT SIGTERM
-
-# Carpeta local donde se guardan las imágenes
+# --- MÓDULO DE CONFIGURACIÓN ---
 LOCAL_DIR="/docker/images"
-
-# Nombre del remoto configurado en rclone
 NUBE="GNube"
-
-# Ruta dentro del remoto
 NUBE_PATH="images"
-
-# Carpeta en tu Drive
 REMOTE="${NUBE}:${NUBE_PATH}"
-
-# Tiempo entre sincronizaciones 1 hora (en segundos)
 SYNC_INTERVAL=3600
-
-# Tiempo de visualización de cada imagen (en segundos)
 SLIDE_DELAY=10
 
-# Comando feh base
-FEH_CMD="feh -Z -z -F -D $SLIDE_DELAY --hide-pointer --auto-rotate $LOCAL_DIR"
+# --- MÓDULO DE LIMPIEZA Y SALIDA ---
+# Función que se ejecuta al salir del script (Ctrl+C)
+cleanup() {
+    echo -e "\n[INFO] Saliendo del slideshow..."
+    # Verifica si feh está en ejecución antes de intentar matarlo
+    if pgrep -x "feh" > /dev/null; then
+        echo "[INFO] Deteniendo el proceso 'feh'..."
+        pkill feh
+    fi
+    echo "[INFO] Script finalizado."
+    exit 0
+}
 
-# Guardar comando en variable
-RCLONE_SYNC_CMD="rclone sync \"$REMOTE\" \"$LOCAL_DIR\" --update --verbose --drive-chunk-size 64M"
+# Atrapa las señales de interrupción y terminación y llama a la función cleanup
+trap cleanup SIGINT SIGTERM
 
+# --- MÓDULO DE SINCRONIZACIÓN ---
+sync_images() {
+    echo "[INFO] Sincronizando carpeta remota $REMOTE con $LOCAL_DIR ..."
+    rclone sync "$REMOTE" "$LOCAL_DIR" --update --verbose --drive-chunk-size 64M
+}
+
+# --- FLUJO PRINCIPAL ---
 echo "=== Iniciando Slideshow desde Google Drive ==="
-echo "Sincronizando carpeta remota $REMOTE con $LOCAL_DIR ..."
-eval $RCLONE_SYNC_CMD
+sync_images
 
 while true; do
-    echo "Lanzando presentación de imágenes..."
-    $FEH_CMD
+    # Verifica si hay imágenes antes de lanzar feh
+    if [ -n "$(find "$LOCAL_DIR" -maxdepth 1 -type f)" ]; then
+        echo "[INFO] Lanzando presentación de imágenes..."
+        feh -Z -z -F -D $SLIDE_DELAY --hide-pointer --auto-rotate "$LOCAL_DIR"
+    else
+        echo "[WARN] No se encontraron imágenes en $LOCAL_DIR. Esperando para re-sincronizar."
+    fi
 
-    echo "Esperando $SYNC_INTERVAL segundos antes de la próxima sincronización..."
+    echo "[INFO] Esperando $SYNC_INTERVAL segundos antes de la próxima sincronización..."
     sleep $SYNC_INTERVAL
 
-    echo "Actualizando imágenes desde Drive..."
-    eval $RCLONE_SYNC_CMD
+    sync_images
 done
