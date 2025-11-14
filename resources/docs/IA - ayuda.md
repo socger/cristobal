@@ -8561,7 +8561,7 @@ Progreso: he escrito el plan y marqué el diagnóstico como en progreso. Siguien
 
 Pasos y comandos (ejecútalos en tu terminal `bash`):
 
-1) Diagnóstico rápido — comprueba puertos 22 y 443, DNS y HTTPS:
+1) Diagnóstico rápido — comprueba puertos 22 y 443, DNS y HTTPS ... jerofa:
 ```bash
 # Prueba conexión TCP simple (usa netcat)
 nc -vz github.com 22
@@ -8672,7 +8672,7 @@ Los resultados muestran que **todos los puertos están funcionando correctamente
 ✅ HTTPS funciona: curl exitoso
 ```
 
-## 🎯 **El problema NO es de red, es de configuración SSH**
+## 🎯 **El problema NO es de red, es de configuración SSH ... jerofa**
 
 Ya que los puertos están accesibles, el problema está en la **configuración SSH de Git**. Vamos a solucionarlo:
 
