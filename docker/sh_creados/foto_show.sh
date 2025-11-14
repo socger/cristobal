@@ -1,33 +1,3 @@
-# #!/bin/sh
-# cd /docker/images
-# feh -Z -z -F -D 10 --hide-pointer --auto-rotate
-
-
-
-
-# #!/bin/bash
-# LOCAL_DIR="/docker/images"
-# NUBE="GNube"                    # Nombre del remoto configurado en rclone
-# NUBE_PATH="images"              # Ruta dentro del remoto
-# REMOTE="${NUBE}:${NUBE_PATH}"   # Carpeta en tu Drive
-# SYNC_INTERVAL=3600              # Tiempo entre sincronizaciones 1 hora (en segundos)
-# SLIDE_DELAY=60                  # Tiempo de visualización de cada imagen (en segundos)
-
-# while true; do
-#     echo "Sincronizando imágenes desde Google Drive..."
-#     rclone sync "$REMOTE" "$LOCAL_DIR" --update --verbose --drive-chunk-size 64M
-
-#     echo "Sincronización completa. Iniciando presentación..."
-#     feh -Z -z -F -D 10 --hide-pointer --auto-rotate "$LOCAL_DIR"
-
-#     # echo "Reiniciando ciclo en $SYNC_INTERVAL segundos..."
-#     sleep $SYNC_INTERVAL
-# done
-
-
-
-
-
 #!/bin/bash
 # ===================================================
 # Descripción: Sincroniza imágenes desde una carpeta
