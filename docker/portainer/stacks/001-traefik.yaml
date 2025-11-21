@@ -5,15 +5,16 @@ services:
     image: traefik:v2.11
     command:
       - --providers.docker=true
-      - --entrypoints.web.address=:80
-      - --entrypoints.websecure.address=:443
       - --providers.docker.exposedbydefault=false
       - --providers.docker.swarmMode=true
       - --providers.docker.network=traefik_public
       - --providers.docker.endpoint=unix:///var/run/docker.sock
+
+      - --entrypoints.web.address=:80
+      - --entrypoints.websecure.address=:443
+
       - --certificatesresolvers.le.acme.httpchallenge=true
       - --certificatesresolvers.le.acme.httpchallenge.entrypoint=web
-
 #     *** CAMBIAR EL EMAIL EN LA LINEA DE ABAJO ***
       - --certificatesresolvers.le.acme.email=socger@gmail.com
 #     *** CAMBIAR EL EMAIL EN LA LINEA DE ARRIBA ***
