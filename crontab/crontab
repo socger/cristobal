@@ -24,8 +24,8 @@
 # Se ejecutará de lunes a viernes a las 8:45pm
 # 45 20 * * 1-5 /docker/sh_creados/backup_with_docker_pause.sh
 
-# Se ejecutará cada día a las 8:45pm
-45 20 * * * /docker/sh_creados/backup_with_docker_pause.sh
+# Se ejecutará cada día a las 10:05pm
+05 22 * * * /docker/sh_creados/backup_with_docker_pause.sh
 
 # Se ejecutará cada sábado a las 1:45pm
 45 13 * * 6 /docker/sh_creados/backup_with_docker_pause.sh
