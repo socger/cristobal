@@ -6,8 +6,8 @@ LOGFILE="/docker/logs/facturascripts_cron_$FECHA.log"
 
 echo "[$(date)] 🔄 Iniciando cron de FacturaScripts..." >> "$LOGFILE"
 
-# Obtener el nombre del contenedor que ejecuta la imagen FacturaScripts
-FS_CONTAINER=$(docker ps --format '{{.Names}}' | grep '^facturascripts_facturascripts' | head -n1)
+# Obtener el nombre del contenedor que ejecuta la imagen FacturaScripts (Docker Swarm)
+FS_CONTAINER=$(docker ps --format '{{.Names}}' | grep 'facturascripts_facturascripts' | head -n1)
 
 if [ -z "$FS_CONTAINER" ]; then
     echo "[$(date)] ❌ Contenedor de FacturaScripts no encontrado o no está corriendo." >> "$LOGFILE"
