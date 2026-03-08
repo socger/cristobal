@@ -30,6 +30,9 @@ source fn_upload_to_gdrive.sh
 # Load function to create the zip backup
 source fn_create_zip_backup.sh
 
+# Cargamos funciones de copia lógica de MySQL
+source bd_dump_mysql.sh
+
 # Cargamos función para verificar servicios de stacks
 source fn_verificar_servicios.sh
 
@@ -51,9 +54,7 @@ DEST_DIR="$MOUNT_DISK_USB/backup"
 # Nombre del archivo de respaldo (con fecha y hora)
 BACKUP_FILE="$DEST_DIR/$BACKUP_BASENAME$(date +%Y%m%d_%H%M%S).tar.gz"
 
-# Variables para mysql dump
-DUMP_DIR="$SOURCE_PATH/mysql_dump_temp"
-MYSQL_DUMP_FILE="$DUMP_DIR/mysql_dump_$(date +%Y%m%d_%H%M%S).sql"
+prepare_mysql_dump_paths "$SOURCE_PATH"
 
 msg "---------------------------------------------" "$LOGFILE"
 msg "- INICIO DE LA COPIA                        -" "$LOGFILE"
@@ -79,29 +80,8 @@ if [ -n "$STACKS" ]; then
     # Crear carpeta de destino si no existe
     mkdir -p "$DEST_DIR"
 
-    # Hacer mysqldump antes de detener los contenedores #
-
-    # Obtener el nombre del contenedor que ejecuta la imagen FacturaScripts
-    # La línea siguiente busca contenedores cuyo nombre comienza con 'mysql_mysql'
-    # MYSQL_CONTAINER=$(docker ps --format '{{.Names}}' | grep '^mysql_mysql' | head -n1)
-
-    # Pero mi contenedor empieza por '002-mysql_mysql_1', así que uso la línea siguiente que busca el contenedor que contenga 'mysql_mysql'
-    MYSQL_CONTAINER=$(docker ps --format '{{.Names}}' | grep 'mysql_mysql' | head -n1)
-    if [ -z "$MYSQL_CONTAINER" ]; then
-        msg "[$(date)] ❌ Contenedor de mySql no encontrado o no está corriendo." "$LOGFILE"
-        exit 1
-    fi
-
-    # Crear carpeta temporal para el dump
-    mkdir -p "$DUMP_DIR"
-
-    msg "[$(date)] Realizando volcado lógico de MySQL desde el contenedor '$MYSQL_CONTAINER'..." "$LOGFILE"
-    docker exec "$MYSQL_CONTAINER" mysqldump -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" --all-databases > "$MYSQL_DUMP_FILE"
-
-    if [ $? -eq 0 ]; then
-        msg "[$(date)] mysqldump completado: $MYSQL_DUMP_FILE" "$LOGFILE"
-    else
-        msg "[$(date)] Error al ejecutar mysqldump" "$LOGFILE"
+    # Hacer mysqldump antes de detener los contenedores
+    if ! run_mysql_dump "$MYSQL_USER" "$MYSQL_PASSWORD" "$LOGFILE"; then
         exit 1
     fi
 
@@ -112,8 +92,7 @@ if [ -n "$STACKS" ]; then
     create_zip_backup "$MOUNT_DISK_USB" "$DISK_USB" "$LOGFILE" "$SOURCE_PATH" "$DEST_DIR" "$BACKUP_FILE" "$STACKS"
 
     # Eliminar el dump temporal
-    rm -rf "$DUMP_DIR"
-    msg "[$(date)] Volcado lógico de MySQL eliminado del sistema (incluido en el .tar.gz)" "$LOGFILE"
+    cleanup_mysql_dump "$DUMP_DIR" "$LOGFILE"
 
     # Borramos backups antiguos
     delete_backups "$BACKUP_RETENTION_DAYS" "$BACKUP_BASENAME" "$LOGFILE" "$DEST_DIR"
