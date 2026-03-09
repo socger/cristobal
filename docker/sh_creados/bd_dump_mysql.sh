@@ -14,19 +14,26 @@ sanitize_for_filename() {
   echo "$value" | tr -c '[:alnum:]_.-' '_'
 }
 
+# Obtiene la contraseña root de un contenedor MySQL via docker inspect.
+get_mysql_root_password() {
+  local container=$1
+  docker inspect "$container" --format '{{range .Config.Env}}{{println .}}{{end}}' \
+    | grep '^MYSQL_ROOT_PASSWORD=' \
+    | head -n1 \
+    | cut -d'=' -f2-
+}
+
 # Realiza un dump por cada contenedor de servicios MySQL en ejecución.
 run_mysql_dump() {
-  local mysql_user=$1
-  local mysql_password=$2
-  local logfile=$3
+  local logfile=$1
   local found_any=false
-  local line=""
   local container_name=""
   local stack_name=""
   local service_name=""
   local safe_stack_name=""
   local safe_service_name=""
   local dump_file=""
+  local root_password=""
 
   mkdir -p "$DUMP_DIR"
 
@@ -41,8 +48,15 @@ run_mysql_dump() {
     safe_service_name=$(sanitize_for_filename "$service_name")
     dump_file="$DUMP_DIR/mysql_dump_${safe_stack_name}_${safe_service_name}_${MYSQL_DUMP_TIMESTAMP}.sql"
 
+    # Obtener la contraseña root específica de este contenedor
+    root_password=$(get_mysql_root_password "$container_name")
+    if [ -z "$root_password" ]; then
+      msg "[$(date)] ❌ No se pudo obtener MYSQL_ROOT_PASSWORD del contenedor '$container_name'" "$logfile"
+      return 1
+    fi
+
     msg "[$(date)] Realizando volcado lógico de MySQL desde '$container_name' (stack: '$stack_name', servicio: '$service_name')..." "$logfile"
-    if docker exec "$container_name" mysqldump -u"$mysql_user" -p"$mysql_password" --all-databases > "$dump_file"; then
+    if docker exec "$container_name" mysqldump -uroot -p"$root_password" --all-databases > "$dump_file"; then
       msg "[$(date)] mysqldump completado: $dump_file" "$logfile"
     else
       msg "[$(date)] ❌ Error al ejecutar mysqldump en '$container_name'" "$logfile"

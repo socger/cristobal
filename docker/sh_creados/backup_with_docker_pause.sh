@@ -81,7 +81,7 @@ if [ -n "$STACKS" ]; then
     mkdir -p "$DEST_DIR"
 
     # Hacer mysqldump antes de detener los contenedores
-    if ! run_mysql_dump "$MYSQL_USER" "$MYSQL_PASSWORD" "$LOGFILE"; then
+    if ! run_mysql_dump "$LOGFILE"; then
         exit 1
     fi
 
