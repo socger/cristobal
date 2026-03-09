@@ -1,5 +1,7 @@
 #!/bin/bash
 
+clear
+
 # Obtener el directorio donde está ubicado este script
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
