@@ -116,3 +116,15 @@ fatal: ruta especificada '.github/' no concordó con ningún archivo
 GitHub Copilot: Buenas noticias — ese error significa que .github **nunca fue trackeado por git**, así que no hay nada que eliminar del índice. El .gitignore que acabamos de añadir es suficiente y la carpeta ya está ignorada correctamente.
 
 No necesitas hacer nada más.
+
+User: Haz lo mismo con AGENTS.md
+
+GitHub Copilot: Replacing 2 lines with 3 lines in [](file:///home/socger/trabajo/galvintec/voltfer-ia/voltfer-ia-back/.gitignore)
+
+
+```
+
+```
+AGENTS.md añadido al .gitignore. Tampoco estaba trackeado por git, así que no necesitas hacer nada más.
+
+Made changes.
