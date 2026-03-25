@@ -83,3 +83,36 @@ El symlink funciona perfectamente a nivel del sistema de ficheros. El problema e
 **Esto no afecta a Copilot** — Copilot lee el fichero del disco, donde el symlink funciona correctamente.
 
 Para ver los cambios reflejados en la pestaña de VS Code, simplemente cierra y vuelve a abrir copilot-instructions.md en el editor tras editar AGENTS.md. O mejor aún, edita directamente AGENTS.md y no abras copilot-instructions.md en el editor — solo es un enlace simbólico, el fichero real es AGENTS.md.
+
+User: Me gustaría que el contenido del path ".github" no se subiera a gitHub. Pero que si que funcionara en local, en mi equipo. ¿Puedes modificarme ".gitignore" para conseguir lo que te pido?
+
+GitHub Copilot: Searched for files matching `voltfer-ia-back` · `.gitignore`, 1 match
+
+Read [](file:///home/socger/trabajo/galvintec/voltfer-ia/voltfer-ia-back/.gitignore#1-1), lines 1 to 50
+
+Read [](file:///home/socger/trabajo/galvintec/voltfer-ia/voltfer-ia-back/.gitignore#50-50), lines 50 to 60
+
+Replacing 4 lines with 7 lines in [](file:///home/socger/trabajo/galvintec/voltfer-ia/voltfer-ia-back/.gitignore)
+
+
+```
+
+```
+Añadido .github al .gitignore. 
+
+Ten en cuenta que si .github ya está trackeado por git (commits anteriores), necesitarás eliminarlo del índice para que git deje de seguirlo:
+
+```bash
+git rm -r --cached .github/
+```
+
+Esto no borra los ficheros localmente, solo los deja de rastrear. Después haz commit y git ignorará esa carpeta en adelante.
+
+Made changes.
+
+User: (.venv) socger@socger-HP-250-G8-Notebook-PC:~/trabajo/galvintec/voltfer-ia/voltfer-ia-back$ git rm -r --cached .github/
+fatal: ruta especificada '.github/' no concordó con ningún archivo
+
+GitHub Copilot: Buenas noticias — ese error significa que .github **nunca fue trackeado por git**, así que no hay nada que eliminar del índice. El .gitignore que acabamos de añadir es suficiente y la carpeta ya está ignorada correctamente.
+
+No necesitas hacer nada más.
